@@ -362,3 +362,43 @@ committed before any model is fitted. Code: `research/dna_age.py`.
 - **Survey weights** are not used (unweighted), as in earlier sections.
 - **Amendment before any fitting.** Ages are 50-84: these cycles record
   everyone aged 85+ as 85, so they are excluded, as in sections 5-8.
+
+## 10. Result: a blood score tracks DNA aging better than PhenoAge
+
+Run once on the locked test set (commit 3f93815): 716 adults aged
+50-84; training 1672. Correlations are between age-independent
+residuals (how much older or younger than the birthday each measure says).
+
+| DNA target | PhenoAge (S0) | Blood refit (S1) | Refit + pulse (S2) | S1 minus S0 (95% CI) |
+|---|---|---|---|---|
+| GrimAge2 acceleration (internal-age state) - primary | 0.381 | 0.492 | 0.492 | +0.111 (+0.057 to +0.164) |
+| DunedinPoAm (pace of aging) - primary | 0.302 | 0.489 | 0.496 | +0.187 (+0.121 to +0.249) |
+| Horvath acceleration | 0.117 | 0.173 | 0.176 | +0.056 (-0.024 to +0.133) |
+| Hannum acceleration | 0.147 | 0.302 | 0.308 | +0.156 (+0.080 to +0.226) |
+| DNA PhenoAge acceleration (partly circular) | 0.267 | 0.400 | 0.402 | +0.133 (+0.075 to +0.188) |
+| DNA telomere length (refit predicts length; PhenoAge sign is negative = shorter) | -0.093 | 0.269 | 0.262 | +0.362 (+0.217 to +0.515) |
+
+**Both pre-registered primary tests succeed.** The 9-marker blood refit
+tracks DNA internal age (GrimAge2) and DNA pace of aging (DunedinPoAm)
+clearly better than PhenoAge does, and it also beats PhenoAge for Hannum
+and DNA PhenoAge. Exam pulse adds nothing.
+
+**What drives it** (standardized ridge weights, largest first):
+- GrimAge2: lymphocyte_pct -1.13, mcv +1.06, rdw +1.06, wbc +0.88, crp +0.78, glucose +0.47, alp +0.42, creatinine +0.25, albumin -0.18.
+- DunedinPoAm: lymphocyte_pct -0.03, mcv +0.02, rdw +0.02, wbc +0.01, crp +0.01, alp +0.01, glucose +0.00, albumin -0.00, creatinine -0.00.
+
+Lower lymphocyte %, higher MCV, RDW, WBC and CRP lead both. Part of this is
+the blood signature of smoking, which GrimAge encodes directly (pack-years)
+and which also raises DunedinPoAm. The score therefore partly measures
+smoking-related aging. That is real and modifiable, but it should be stated
+to users.
+
+**What a correlation of about 0.49 means.** The blood score explains roughly
+a quarter of the person-to-person variation in DNA aging beyond calendar
+age. It is a meaningful marker of internal aging, not a substitute for a
+DNA test.
+
+**Limits.** US adults aged 50-84 from 1999-2002, unweighted, one time point
+(so this validates the "right now" score; pace from repeat blood tests still
+needs repeat-measure data). Not validated in Indian populations or under 50.
+Nothing in the package or the web page has changed.
