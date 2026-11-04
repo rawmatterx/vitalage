@@ -326,3 +326,39 @@ pre-registered 2015-18 test). As pre-registered, nothing changes in the
 package or the web page. Next steps before any use: confirm in a different
 population (LASI for India, or UK Biobank), recalibrate the absolute risk,
 and convert the refit to an age in years with Levine's method.
+
+## 9. Tracking DNA age with a blood score, NHANES 1999-2002: pre-registration
+
+Purpose (the project's goal from 2026-11-04 on): VitalAge should report how
+much aging the body shows now and how fast it is moving, not forecast death.
+So the yardstick here is DNA-methylation aging, not mortality. Written and
+committed before any model is fitted. Code: `research/dna_age.py`.
+
+- **Data.** NHANES 1999-2000 and 2001-2002 adults aged 50+ with the CDC's
+  public DNA methylation clocks (`dnmepi.sas7bdat`) and all 9 PhenoAge blood
+  markers. Exam pulse is used where present.
+- **Targets.** Each is the residual of a DNA clock on calendar age (fitted in
+  the training set), i.e. how much older or younger the DNA looks than the
+  birthday says.
+  - Primary 1, internal-age state: GrimAge2 acceleration (years).
+  - Primary 2, pace of aging: DunedinPoAm (biological years per year).
+  - Secondary: Horvath, Hannum and DNA PhenoAge acceleration, and telomere
+    length. DNA PhenoAge was trained to predict blood PhenoAge, so agreement
+    with it is partly circular.
+- **Scores compared.**
+  - S0: blood PhenoAge acceleration (published formula, residual on age).
+  - S1: ridge regression of the target on the 9 markers (CRP as ln) + age.
+  - S2: S1 + exam pulse.
+- **Metric.** Pearson correlation between a score (as an age-independent
+  residual) and the target residual, on the locked test set. For each
+  primary target: S1 minus S0, with a paired bootstrap 95% CI (2,000
+  resamples).
+- **Split.** 30% test set stratified by sex and 10-year age band, SEQNs and
+  SHA-256 committed before fitting. Ridge penalty chosen by 5-fold CV in the
+  70%.
+- **Success rule.** For a primary target, the refit "tracks DNA aging better
+  than PhenoAge" if the CI of S1 minus S0 excludes zero. S2 is reported but
+  carries no success rule.
+- **Survey weights** are not used (unweighted), as in earlier sections.
+- **Amendment before any fitting.** Ages are 50-84: these cycles record
+  everyone aged 85+ as 85, so they are excluded, as in sections 5-8.

@@ -1,4 +1,4 @@
-"""Download the public NHANES 2003-2006, 2011-2014 and 2015-2018 files used in research/
+"""Download the public NHANES 1999-2002 (DNA methylation), 2003-2006, 2011-2014 and 2015-2018 files used in research/
 
     python3 research/fetch_nhanes.py            # into research/data/
 
@@ -12,11 +12,13 @@ Files already downloaded with the right size are skipped.
 
 import os
 import sys
+import urllib.parse
 import urllib.request
 
 NHANES = "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/%s/DataFiles/%s"
 MORT = ("https://ftp.cdc.gov/pub/Health_Statistics/NCHS/datalinkage/"
         "linked_mortality/%s")
+DNAM = "https://wwwn.cdc.gov/Nchs/data/nhanes/dnam/%s"
 
 FILES = [
     # 2003-2004 (cycle C)
@@ -65,11 +67,24 @@ FILES = [
     NHANES % ("2017", "CBC_J.xpt"),
     NHANES % ("2017", "HSCRP_J.xpt"),
     MORT % "NHANES_2017_2018_MORT_2019_PUBLIC.dat",
+    # 1999-2000 and 2001-2002: DNA methylation clocks (adults 50+) with labs
+    DNAM % "dnmepi.sas7bdat",
+    DNAM % "NHANES%20DNAm%20Epigenetic%20Biomarkers%20Data%20Documentation.pdf",
+    NHANES % ("1999", "DEMO.xpt"),
+    NHANES % ("1999", "LAB18.xpt"),       # biochemistry
+    NHANES % ("1999", "LAB11.xpt"),       # CRP
+    NHANES % ("1999", "LAB25.xpt"),       # complete blood count
+    NHANES % ("1999", "BPX.xpt"),
+    NHANES % ("2001", "DEMO_B.xpt"),
+    NHANES % ("2001", "L40_B.xpt"),
+    NHANES % ("2001", "L11_B.xpt"),
+    NHANES % ("2001", "L25_B.xpt"),
+    NHANES % ("2001", "BPX_B.xpt"),
 ]
 
 
 def fetch(url, folder):
-    name = url.rsplit("/", 1)[1]
+    name = urllib.parse.unquote(url.rsplit("/", 1)[1])
     path = os.path.join(folder, name)
     with urllib.request.urlopen(urllib.request.Request(url, method="HEAD")) as r:
         size = int(r.headers.get("Content-Length", 0))
