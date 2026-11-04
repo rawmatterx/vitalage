@@ -1,0 +1,700 @@
+<title>VitalAge Calculator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@500;600&display=swap">
+<style>
+/* Layout: a lab-report form on the left, a live result sheet on the right; one column on phones. */
+:root {
+  --bg: #f3f5f6;
+  --surface: #ffffff;
+  --ink: #12181c;
+  --ink-2: #4a565e;
+  --muted: #74828a;
+  --line: #dbe2e5;
+  --accent: #1d6a86;
+  --accent-ink: #ffffff;
+  --older: #d2453f;
+  --younger: #2a78d6;
+  --fit: #d95a22;
+  --note-bg: #fff4df;
+  --note-ink: #6e4600;
+  --bad: #b3261e;
+  --font-display: "Sora", "Avenir Next", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1416; --surface: #172024; --ink: #e8eef0; --ink-2: #b3c0c6; --muted: #81909a;
+    --line: #2a363b; --accent: #5fb3cf; --accent-ink: #0b1215; --older: #e66767; --younger: #3987e5;
+    --fit: #e07a45; --note-bg: #33270f; --note-ink: #f1c879; --bad: #ff8a80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1416; --surface: #172024; --ink: #e8eef0; --ink-2: #b3c0c6; --muted: #81909a;
+  --line: #2a363b; --accent: #5fb3cf; --accent-ink: #0b1215; --older: #e66767; --younger: #3987e5;
+  --fit: #e07a45; --note-bg: #33270f; --note-ink: #f1c879; --bad: #ff8a80;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 var(--font-body);
+}
+.wrap {
+  max-width: 1120px; margin: 0 auto;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header.top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 20px; }
+h1 { font: 600 28px/1.15 var(--font-display); margin: 0; letter-spacing: -0.01em; }
+h1 span { color: var(--accent); }
+.lede { margin: 4px 0 0; color: var(--ink-2); max-width: 60ch; text-wrap: pretty; }
+.privacy { font-size: 13px; color: var(--ink-2); display: flex; gap: 8px; align-items: center; }
+.privacy svg { flex: none; }
+h2 { font: 600 17px/1.3 var(--font-display); margin: 0; text-wrap: balance; }
+.eyebrow { font: 500 11px/1 var(--font-data); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; min-width: 0; }
+.stack { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.results { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); }
+
+.row-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; margin-bottom: 12px; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  font: 500 13px/1 var(--font-body); padding: 8px 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.profile { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+label.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-2); }
+input, select {
+  font: 500 15px/1.2 var(--font-data); color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; width: 100%;
+}
+select { font-family: var(--font-body); font-size: 14px; }
+input[aria-invalid="true"] { border-color: var(--bad); }
+
+.example-flag {
+  display: none; font-size: 13px; background: var(--note-bg); color: var(--note-ink);
+  border-radius: 6px; padding: 8px 10px; margin-bottom: 12px;
+}
+.is-example .example-flag { display: block; }
+
+table.report { width: 100%; border-collapse: collapse; }
+table.report th { font: 500 11px/1 var(--font-data); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); text-align: left; padding: 0 8px 8px 0; }
+table.report td { padding: 6px 8px 6px 0; border-top: 1px solid var(--line); vertical-align: middle; }
+table.report td:last-child, table.report th:last-child { padding-right: 0; }
+.mname { font-weight: 600; }
+.mtest { display: block; font-size: 12px; color: var(--muted); }
+.opt { font: 400 12px var(--font-body); color: var(--muted); }
+.cval { width: 7.5em; }
+.cunit { width: 9.5em; }
+.cref { font: 400 12px/1.3 var(--font-data); color: var(--muted); white-space: nowrap; }
+.err { display: block; color: var(--bad); font-size: 12px; margin-top: 4px; }
+
+.band { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.hint { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+
+/* Result sheet */
+.readout { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0 16px; }
+.metric { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; min-width: 0; }
+.metric .k { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); }
+.metric .k i { width: 12px; height: 3px; border-radius: 2px; background: var(--c); }
+.metric .v { font: 600 34px/1.1 var(--font-display); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.metric .v small { font: 500 15px var(--font-body); color: var(--ink-2); }
+.metric .d { font-size: 13px; color: var(--ink-2); }
+.calendar { font-size: 14px; color: var(--ink-2); }
+.calendar b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.bars { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.bar { display: grid; grid-template-columns: 7.5em minmax(0, 1fr) 3.5em; align-items: center; gap: 8px; font-size: 13px; }
+.bar .lab { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar .track { position: relative; height: 14px; }
+.bar .track::before { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--line); }
+.bar .fill { position: absolute; top: 2px; height: 10px; border-radius: 3px; }
+.bar .num { font: 500 12px var(--font-data); text-align: right; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-2); margin-top: 8px; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+.section + .section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.sub { font-size: 13px; color: var(--ink-2); margin: 4px 0 0; text-wrap: pretty; }
+.notes { margin: 10px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.notes li { font-size: 13px; background: var(--note-bg); color: var(--note-ink); border-radius: 6px; padding: 6px 10px; }
+.status { font-size: 13px; color: var(--muted); min-height: 1.5em; }
+
+.refs { font-size: 13px; color: var(--ink-2); }
+.refs ol { padding-left: 20px; margin: 8px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.refs a { color: var(--accent); word-break: break-word; }
+footer { margin-top: 20px; font-size: 13px; color: var(--muted); max-width: 75ch; }
+
+.strip { display: none; }
+@media (max-width: 860px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .results { position: static; }
+  .strip {
+    display: flex; gap: 16px; align-items: baseline; position: sticky; z-index: 5;
+    top: env(safe-area-inset-top, 0px); background: var(--surface); border-bottom: 1px solid var(--line);
+    padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+    font-size: 13px; color: var(--ink-2);
+  }
+  .strip b { font: 600 18px var(--font-display); color: var(--ink); font-variant-numeric: tabular-nums; }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+}
+@media (max-width: 560px) {
+  table.report thead { display: none; }
+  table.report tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+  table.report td { border: 0; padding: 0; }
+  table.report td:first-child, table.report td.cref { grid-column: 1 / -1; }
+  .cval, .cunit { width: auto; }
+  .readout { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bar .fill { transition: width 0.2s ease, left 0.2s ease; }
+}
+</style>
+
+<div class="strip" aria-hidden="true">
+  <span>Blood age <b id="strip-blood">–</b></span>
+  <span>Fitness age <b id="strip-fit">–</b></span>
+</div>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Vital<span>Age</span></h1>
+      <p class="lede">Biological age from a routine blood report, using the published Phenotypic Age (PhenoAge) formula, plus an optional Fitness Age from your band.</p>
+    </div>
+    <p class="privacy">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 2.5 3.5v4c0 3.4 2.3 5.9 5.5 7 3.2-1.1 5.5-3.6 5.5-7v-4L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+      Calculated in your browser. Nothing you type is sent anywhere.
+    </p>
+  </header>
+
+  <form class="grid" id="form" autocomplete="off" novalidate>
+    <div class="stack">
+      <section class="panel" aria-labelledby="h-you">
+        <div class="row-head">
+          <h2 id="h-you">You</h2>
+        </div>
+        <div class="profile">
+          <label class="field" for="age">Age (years)
+            <input id="age" name="age" type="number" inputmode="decimal" min="18" max="100" step="0.1">
+          </label>
+          <label class="field" for="sex"><span>Sex <span class="opt">(for VO₂max)</span></span>
+            <select id="sex" name="sex">
+              <option value="">Not given</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="h-blood" id="blood-panel">
+        <div class="row-head">
+          <h2 id="h-blood">Blood report</h2>
+          <div class="btns">
+            <button type="button" id="btn-example">Load example</button>
+            <button type="button" id="btn-clear">Clear all</button>
+          </div>
+        </div>
+        <p class="example-flag">These are example values. Replace them with the numbers on your own report.</p>
+        <table class="report">
+          <thead><tr><th>Marker</th><th>Result</th><th>Unit</th><th>Usual range</th></tr></thead>
+          <tbody id="markers"></tbody>
+        </table>
+        <p class="hint">Type values exactly as printed, and pick the unit shown on your report. Leave up to 3 blank if they were not tested; you will get a range. Use RDW-CV (%), not RDW-SD (fL). If CRP says "&lt;0.5", enter 0.5.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="h-band">
+        <div class="row-head">
+          <h2 id="h-band">Fitness band <span class="opt">(optional)</span></h2>
+        </div>
+        <div class="band">
+          <label class="field" for="rhr">Resting heart rate (bpm)
+            <input id="rhr" type="number" inputmode="decimal" step="1">
+          </label>
+          <label class="field" for="steps">Steps per day
+            <input id="steps" type="number" inputmode="numeric" step="100">
+          </label>
+          <label class="field" for="sleep">Sleep per night (hours)
+            <input id="sleep" type="number" inputmode="decimal" step="0.1">
+          </label>
+          <label class="field" for="vo2">VO₂max (mL/kg/min)
+            <input id="vo2" type="number" inputmode="decimal" step="0.1">
+          </label>
+        </div>
+        <p class="hint">Use your typical value over the last month, as shown in your band's app.</p>
+      </section>
+    </div>
+
+    <aside class="stack results" aria-live="polite">
+      <section class="panel">
+        <span class="eyebrow">Result</span>
+        <p class="calendar" id="calendar">Enter your age to begin.</p>
+        <div class="readout">
+          <div class="metric" style="--c: var(--younger)">
+            <div class="k"><i></i>Blood age</div>
+            <div class="v" id="blood-v">–</div>
+            <div class="d" id="blood-d">Fill in the blood report</div>
+          </div>
+          <div class="metric" style="--c: var(--fit)">
+            <div class="k"><i></i>Fitness Age</div>
+            <div class="v" id="fit-v">–</div>
+            <div class="d" id="fit-d">Optional: add band values</div>
+          </div>
+        </div>
+        <p class="status" id="status"></p>
+
+        <div class="section" id="blood-why">
+          <h2>What moves your blood age</h2>
+          <p class="sub" id="blood-why-sub"></p>
+          <div class="bars" id="blood-bars"></div>
+          <div class="legend"><span style="--c: var(--older)">Adds years</span><span style="--c: var(--younger)">Removes years</span></div>
+        </div>
+
+        <div class="section" id="fit-why">
+          <h2>What moves your Fitness Age</h2>
+          <p class="sub">Compared with resting HR 65 bpm, 7,000 steps, 7–8 h sleep and the median VO₂max for your age and sex.</p>
+          <div class="bars" id="fit-bars"></div>
+        </div>
+
+        <ul class="notes" id="notes"></ul>
+        <div class="btns" style="margin-top:14px">
+          <button type="button" class="primary" id="btn-copy">Copy summary</button>
+        </div>
+        <p class="status" id="copy-status"></p>
+      </section>
+
+      <section class="panel refs" aria-labelledby="h-refs">
+        <h2 id="h-refs">Scientific basis</h2>
+        <p class="sub">Blood age is <strong>Phenotypic Age</strong>, developed by Levine et al. (2018) from US NHANES III and validated in 11,432 adults by Liu et al. (2018). The published coefficients are used unchanged. It has not been validated for Indian populations.</p>
+        <ol id="refs-blood"></ol>
+        <p class="sub" style="margin-top:12px">Fitness Age converts published mortality hazard ratios into years with the same rate PhenoAge uses. It is a literature-based score, not a validated clock.</p>
+        <ol id="refs-fit"></ol>
+      </section>
+    </aside>
+  </form>
+
+  <footer>VitalAge is an independent implementation and is not affiliated with or endorsed by the authors cited. It is not a diagnostic tool; talk to a doctor about any result that worries you. Source code: github.com/rawmatterx/vitalage</footer>
+</div>
+
+<script id="vitalage-engine">
+/* VitalAge calculation engine. Mirrors the Python package `phenoage`
+   (core.py, units.py, explain.py, partial.py, fitness.py); tests check that
+   both give the same numbers. */
+var VA = (function () {
+  var INTERCEPT = -19.90667, AGE_COEF = 0.08035356;
+  var COEF = {
+    albumin: -0.03359355, creatinine: 0.009506491, glucose: 0.1953192, crp: 0.09536762,
+    lymphocyte_pct: -0.01199984, mcv: 0.02676401, rdw: 0.3306156, alp: 0.001868778, wbc: 0.05542406
+  };
+  var MARKERS = ["albumin", "creatinine", "glucose", "crp", "lymphocyte_pct", "mcv", "rdw", "alp", "wbc"];
+  var GAMMA = 0.007692696, HORIZON = 120, RATE = 0.090165, OFFSET = 141.50225, SCALE = 0.0055305;
+  var VALID_AGE = [20, 84];
+
+  var CANONICAL_UNITS = { albumin: "g/L", creatinine: "umol/L", glucose: "mmol/L", crp: "mg/dL",
+    lymphocyte_pct: "%", mcv: "fL", rdw: "%", alp: "U/L", wbc: "10^3/uL" };
+  var FACTORS = {
+    albumin: { "g/l": 1, "g/dl": 10 },
+    creatinine: { "umol/l": 1, "mg/dl": 88.42 },
+    glucose: { "mmol/l": 1, "mg/dl": 1 / 18.016 },
+    crp: { "mg/dl": 1, "mg/l": 0.1 },
+    lymphocyte_pct: { "%": 1 },
+    mcv: { "fl": 1 },
+    rdw: { "%": 1 },
+    alp: { "u/l": 1, "iu/l": 1 },
+    wbc: { "10^3/ul": 1, "10^9/l": 1, "thou/ul": 1, "cells/ul": 0.001, "cells/cumm": 0.001, "/cumm": 0.001, "/ul": 0.001 }
+  };
+  var PLAUSIBLE = {
+    albumin: [15, 60], creatinine: [20, 1500], glucose: [2, 35], crp: [0.001, 30],
+    lymphocyte_pct: [1, 80], mcv: [50, 130], rdw: [9, 30], alp: [10, 1000], wbc: [0.5, 50]
+  };
+
+  function normalise(unit) {
+    var u = String(unit).trim().toLowerCase().replace(/ /g, "");
+    u = u.replace(/µ/g, "u").replace(/μ/g, "u");
+    u = u.replace("mm3", "cumm").replace("cu.mm", "cumm");
+    u = u.replace("x10^3", "10^3").replace("x10^9", "10^9");
+    return u;
+  }
+  function factor(marker, unit) {
+    var f = FACTORS[marker][normalise(unit)];
+    if (f === undefined) throw new Error("Unit " + unit + " is not supported for " + marker);
+    return f;
+  }
+  function toCanonical(marker, value, unit) {
+    var f = factor(marker, unit);
+    if (!(value > 0)) throw new Error("Must be greater than 0. For CRP below the detection limit, enter the limit.");
+    var c = value * f, r = PLAUSIBLE[marker];
+    if (c < r[0] || c > r[1]) throw new Error("Outside the plausible range; check the unit on your report.");
+    return c;
+  }
+
+  function linearPredictor(age, v) {
+    var xb = INTERCEPT + AGE_COEF * age;
+    MARKERS.forEach(function (m) { xb += COEF[m] * (m === "crp" ? Math.log(v[m]) : v[m]); });
+    return xb;
+  }
+  function phenoage(age, v) {
+    var xb = linearPredictor(age, v);
+    var hazard = Math.exp(xb) * (Math.exp(HORIZON * GAMMA) - 1) / GAMMA;
+    var warnings = [];
+    if (age < VALID_AGE[0] || age > VALID_AGE[1]) warnings.push("PhenoAge was fitted on ages 20 to 84; treat the result with caution.");
+    if (v.crp >= 1.0) warnings.push("CRP is 10 mg/L or higher, which usually means an infection or inflammation. Retest when well.");
+    return { phenoage: OFFSET + Math.log(SCALE * hazard) / RATE, mortality: -Math.expm1(-hazard), warnings: warnings };
+  }
+
+  var REFERENCE = { albumin: 44, creatinine: 79.6, glucose: 5.0, crp: 0.1, lymphocyte_pct: 30,
+    mcv: 90, rdw: 13.0, alp: 70, wbc: 6.5 };
+  function term(m, x) { return COEF[m] * (m === "crp" ? Math.log(x) : x); }
+  function markerYears(m, value, ref) { return (term(m, value) - term(m, ref)) / RATE; }
+
+  var NORMAL = {
+    albumin: [35, 50], creatinine: [0.6 * 88.42, 1.3 * 88.42], glucose: [70 / 18.016, 100 / 18.016],
+    crp: [0.02, 1.0], lymphocyte_pct: [20, 40], mcv: [80, 100], rdw: [11.5, 14.5], alp: [40, 130], wbc: [4, 11]
+  };
+  var MAX_MISSING = 3;
+  function range(age, known) {
+    var missing = MARKERS.filter(function (m) { return !(m in known); });
+    if (missing.length > MAX_MISSING) throw new Error(missing.length + " markers missing; at most 3 can be estimated.");
+    var lo = Object.assign({}, known), hi = Object.assign({}, known), mid = Object.assign({}, known);
+    missing.forEach(function (m) {
+      var a = NORMAL[m][0], b = NORMAL[m][1];
+      var swap = markerYears(m, a, REFERENCE[m]) > markerYears(m, b, REFERENCE[m]);
+      lo[m] = swap ? b : a; hi[m] = swap ? a : b; mid[m] = REFERENCE[m];
+    });
+    var r = phenoage(age, mid);
+    return { low: phenoage(age, lo).phenoage, estimate: r.phenoage, high: phenoage(age, hi).phenoage,
+      missing: missing, warnings: r.warnings };
+  }
+
+  // Fitness Age
+  var MAX_TOTAL = 5;
+  var STEPS_CURVE = [[3553, 1.00], [5801, 0.60], [7842, 0.55], [10901, 0.47]];
+  var VO2_REF = {
+    male: [[25, 48.0], [35, 42.4], [45, 37.8], [55, 32.6], [65, 28.2], [75, 24.4]],
+    female: [[25, 37.6], [35, 30.2], [45, 26.7], [55, 23.4], [65, 20.0], [75, 18.3]]
+  };
+  function hrYears(hr) { return Math.log(hr) / RATE; }
+  function interp(points, x) {
+    if (x <= points[0][0]) return points[0][1];
+    if (x >= points[points.length - 1][0]) return points[points.length - 1][1];
+    for (var i = 0; i < points.length - 1; i++) {
+      var p = points[i], q = points[i + 1];
+      if (p[0] <= x && x <= q[0]) return p[1] + (q[1] - p[1]) * (x - p[0]) / (q[0] - p[0]);
+    }
+  }
+  function restingHrYears(bpm) { bpm = Math.min(Math.max(bpm, 45), 100); return hrYears(1.09) * (bpm - 65) / 10; }
+  function stepsLogHr(s) { return interp(STEPS_CURVE.map(function (p) { return [p[0], Math.log(p[1])]; }), s); }
+  function stepsYears(steps, age) { if (age >= 60) steps = Math.min(steps, 8000); return (stepsLogHr(steps) - stepsLogHr(7000)) / RATE; }
+  function vo2Reference(age, sex) { return interp(VO2_REF[sex], age); }
+  function vo2Years(vo2, age, sex) {
+    var mets = (vo2 - vo2Reference(age, sex)) / 3.5;
+    mets = Math.min(Math.max(mets, -4), 4);
+    return hrYears(0.87) * mets;
+  }
+  function sleepYears(h) {
+    if (h < 7) return hrYears(1.12) * Math.min((7 - h) / (7 - 6), 1);
+    if (h > 8) return hrYears(1.30) * Math.min((h - 8) / (9 - 8), 1);
+    return 0;
+  }
+  function fitness(age, sex, m) {
+    var parts = {}, warnings = [];
+    if (m.resting_hr != null) parts.resting_hr = restingHrYears(m.resting_hr);
+    if (m.steps != null) {
+      parts.steps = stepsYears(m.steps, age);
+      if (m.steps < 3553) warnings.push("Very low step counts partly reflect illness or not wearing the band.");
+    }
+    if (m.sleep_hours != null) {
+      parts.sleep_hours = sleepYears(m.sleep_hours);
+      if (m.sleep_hours > 8) warnings.push("Long sleep is linked to risk mostly because it often goes with illness.");
+    }
+    if (m.vo2max != null) {
+      if (sex === "male" || sex === "female") parts.vo2max = vo2Years(m.vo2max, age, sex);
+      else warnings.push("VO₂max is skipped until you choose a sex, because its reference depends on it.");
+    }
+    var keys = Object.keys(parts);
+    if (!keys.length) return null;
+    var total = keys.reduce(function (s, k) { return s + parts[k]; }, 0);
+    var capped = Math.min(Math.max(total, -MAX_TOTAL), MAX_TOTAL);
+    if (capped !== total) warnings.push("The total was capped at " + (capped > 0 ? "+" : "") + capped + " years because the metrics overlap.");
+    return { fitnessAge: age + capped, parts: parts, uncapped: total, warnings: warnings };
+  }
+
+  return {
+    MARKERS: MARKERS, REFERENCE: REFERENCE, NORMAL: NORMAL, CANONICAL_UNITS: CANONICAL_UNITS,
+    factor: factor, toCanonical: toCanonical, phenoage: phenoage, markerYears: markerYears,
+    range: range, fitness: fitness, vo2Reference: vo2Reference,
+    restingHrYears: restingHrYears, stepsYears: stepsYears, vo2Years: vo2Years, sleepYears: sleepYears
+  };
+})();
+if (typeof module !== "undefined") module.exports = VA;
+</script>
+
+<script>
+(function () {
+  var MARKER_INFO = {
+    albumin: { name: "Albumin", test: "LFT", units: ["g/dL", "g/L"] },
+    creatinine: { name: "Creatinine", test: "KFT", units: ["mg/dL", "µmol/L"] },
+    glucose: { name: "Glucose, fasting", test: "Blood sugar", units: ["mg/dL", "mmol/L"] },
+    crp: { name: "C-reactive protein", test: "hs-CRP", units: ["mg/L", "mg/dL"] },
+    lymphocyte_pct: { name: "Lymphocytes", test: "CBC differential", units: ["%"] },
+    mcv: { name: "MCV", test: "CBC", units: ["fL"] },
+    rdw: { name: "RDW-CV", test: "CBC", units: ["%"] },
+    alp: { name: "Alkaline phosphatase", test: "LFT", units: ["U/L", "IU/L"] },
+    wbc: { name: "WBC count", test: "CBC", units: ["cells/cumm", "10^3/µL", "10^9/L"] }
+  };
+  var SHORT = { albumin: "Albumin", creatinine: "Creatinine", glucose: "Glucose", crp: "CRP",
+    lymphocyte_pct: "Lymphocytes", mcv: "MCV", rdw: "RDW", alp: "ALP", wbc: "WBC",
+    resting_hr: "Resting HR", steps: "Steps", sleep_hours: "Sleep", vo2max: "VO₂max" };
+  var EXAMPLE = {
+    age: 42, sex: "male",
+    blood: { albumin: [4.3, "g/dL"], creatinine: [0.9, "mg/dL"], glucose: [95, "mg/dL"], crp: [1.2, "mg/L"],
+      lymphocyte_pct: [32, "%"], mcv: [88, "fL"], rdw: [13.1, "%"], alp: [78, "U/L"], wbc: [6800, "cells/cumm"] },
+    band: { rhr: 62, steps: 8400, sleep: 7.1, vo2: 41 }
+  };
+  var REFS_BLOOD = [
+    ["Levine ME, Lu AT, Quach A, et al. An epigenetic biomarker of aging for lifespan and healthspan. Aging (Albany NY). 2018;10(4):573–591.", "10.18632/aging.101414"],
+    ["Liu Z, Kuo PL, Horvath S, Crimmins E, Ferrucci L, Levine M. A new aging measure captures morbidity and mortality risk across diverse subpopulations from NHANES IV. PLoS Med. 2018;15(12):e1002718.", "10.1371/journal.pmed.1002718"],
+    ["Kwon D, Belsky DW. A toolkit for quantification of biological age from blood chemistry and organ function test data: BioAge. GeroScience. 2021;43(6):2795–2808.", "10.1007/s11357-021-00480-5"]
+  ];
+  var REFS_FIT = [
+    ["Zhang D, Shen X, Qi X. Resting heart rate and all-cause and cardiovascular mortality in the general population: a meta-analysis. CMAJ. 2016;188(3):E53–63.", "10.1503/cmaj.150535"],
+    ["Paluch AE, et al. Daily steps and all-cause mortality: a meta-analysis of 15 international cohorts. Lancet Public Health. 2022;7(3):e219–e228.", "10.1016/S2468-2667(21)00302-9"],
+    ["Kodama S, et al. Cardiorespiratory fitness as a quantitative predictor of all-cause mortality and cardiovascular events. JAMA. 2009;301(19):2024–2035.", "10.1001/jama.2009.681"],
+    ["Kaminsky LA, Arena R, Myers J. Reference standards for cardiorespiratory fitness (FRIEND registry). Mayo Clin Proc. 2015;90(11):1515–1523.", "10.1016/j.mayocp.2015.07.026"],
+    ["Cappuccio FP, et al. Sleep duration and all-cause mortality: a systematic review and meta-analysis. Sleep. 2010;33(5):585–592.", "10.1093/sleep/33.5.585"]
+  ];
+
+  function $(id) { return document.getElementById(id); }
+  function make(tag, cls, text, parent) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function signed(x) {
+    var r = Math.round(x * 10) / 10;
+    return (r > 0 ? "+" : r < 0 ? "−" : "±") + Math.abs(r).toFixed(1);
+  }
+  function num(id) {
+    var t = $(id).value.trim();
+    if (t === "") return null;
+    var x = Number(t.replace(/,/g, ""));
+    return isFinite(x) ? x : NaN;
+  }
+  function fmtRange(m, unit) {
+    var f = VA.factor(m, unit), r = VA.NORMAL[m];
+    function n(x) { var v = Math.round(x / f * 10) / 10; return v >= 1000 ? v.toLocaleString("en-IN") : String(v); }
+    return n(r[0]) + "–" + n(r[1]);
+  }
+
+  // Build the report table
+  var tbody = $("markers");
+  VA.MARKERS.forEach(function (m) {
+    var info = MARKER_INFO[m];
+    var tr = make("tr", null, null, tbody);
+    var td = make("td", null, null, tr);
+    var lab = make("label", "mname", info.name, td);
+    lab.htmlFor = "v-" + m;
+    make("span", "mtest", info.test, td);
+    var tdv = make("td", "cval", null, tr);
+    var inp = make("input", null, null, tdv);
+    inp.id = "v-" + m; inp.type = "text"; inp.inputMode = "decimal";
+    inp.setAttribute("aria-describedby", "e-" + m);
+    var err = make("span", "err", null, tdv); err.id = "e-" + m; err.hidden = true;
+    var tdu = make("td", "cunit", null, tr);
+    var sel = make("select", null, null, tdu);
+    sel.id = "u-" + m; sel.setAttribute("aria-label", info.name + " unit");
+    if (info.units.length === 1) sel.disabled = true;
+    info.units.forEach(function (u) { var o = make("option", null, u, sel); o.value = u; });
+    var tdr = make("td", "cref", null, tr); tdr.id = "r-" + m;
+  });
+
+  function refs(id, list) {
+    list.forEach(function (r) {
+      var li = make("li", null, r[0] + " ", $(id));
+      var a = make("a", null, "doi:" + r[1], li);
+      a.href = "https://doi.org/" + r[1]; a.target = "_blank"; a.rel = "noopener";
+    });
+  }
+  refs("refs-blood", REFS_BLOOD);
+  refs("refs-fit", REFS_FIT);
+
+  function bars(box, parts, order) {
+    box.textContent = "";
+    var keys = order || Object.keys(parts);
+    keys.sort(function (a, b) { return parts[b] - parts[a]; });
+    var span = Math.max(1, Math.max.apply(null, keys.map(function (k) { return Math.abs(parts[k]); })));
+    keys.forEach(function (k) {
+      var v = parts[k];
+      var row = make("div", "bar", null, box);
+      make("span", "lab", SHORT[k] || k, row);
+      var track = make("span", "track", null, row);
+      var fill = make("span", "fill", null, track);
+      var w = Math.abs(v) / span * 50;
+      fill.style.width = w + "%";
+      fill.style.left = (v >= 0 ? 50 : 50 - w) + "%";
+      fill.style.background = v >= 0 ? "var(--older)" : "var(--younger)";
+      make("span", "num", signed(v), row);
+      row.title = (SHORT[k] || k) + ": " + signed(v) + " years";
+    });
+  }
+
+  var lastSummary = "";
+
+  function update() {
+    var age = num("age"), sex = $("sex").value;
+    var notes = $("notes"); notes.textContent = "";
+    function note(t) { make("li", null, t, notes); }
+
+    // Units and usual ranges
+    VA.MARKERS.forEach(function (m) { $("r-" + m).textContent = fmtRange(m, $("u-" + m).value); });
+
+    var known = {}, bad = 0, filled = 0;
+    VA.MARKERS.forEach(function (m) {
+      var input = $("v-" + m), err = $("e-" + m), x = num("v-" + m);
+      input.removeAttribute("aria-invalid"); err.hidden = true;
+      if (x === null) return;
+      filled++;
+      try {
+        if (isNaN(x)) throw new Error("Enter a number.");
+        known[m] = VA.toCanonical(m, x, $("u-" + m).value);
+      } catch (e) {
+        bad++; input.setAttribute("aria-invalid", "true"); err.textContent = e.message; err.hidden = false;
+      }
+    });
+
+    var ageOk = age !== null && !isNaN(age) && age >= 18 && age <= 100;
+    $("age").toggleAttribute("aria-invalid", age !== null && !ageOk);
+    $("calendar").textContent = "";
+    if (ageOk) {
+      $("calendar").appendChild(document.createTextNode("Calendar age "));
+      make("b", null, age.toFixed(1), $("calendar"));
+    } else {
+      $("calendar").textContent = age === null ? "Enter your age to begin." : "Age must be between 18 and 100.";
+    }
+
+    // Blood age
+    var summary = [];
+    var bv = $("blood-v"), bd = $("blood-d"), why = $("blood-why");
+    var nKnown = Object.keys(known).length, missing = VA.MARKERS.length - nKnown;
+    why.hidden = true; bv.textContent = "–"; $("strip-blood").textContent = "–";
+    if (!ageOk) {
+      bd.textContent = "Needs your age";
+    } else if (bad) {
+      bd.textContent = "Check the highlighted value" + (bad > 1 ? "s" : "");
+    } else if (filled === 0) {
+      bd.textContent = "Fill in the blood report";
+    } else if (missing > 3) {
+      bd.textContent = missing + " markers missing; at least 6 of the 9 are needed";
+    } else {
+      var parts = {};
+      Object.keys(known).forEach(function (m) { parts[m] = VA.markerYears(m, known[m], VA.REFERENCE[m]); });
+      if (missing === 0) {
+        var r = VA.phenoage(age, known);
+        bv.textContent = r.phenoage.toFixed(1);
+        bd.textContent = signed(r.phenoage - age) + " years vs calendar age";
+        $("strip-blood").textContent = r.phenoage.toFixed(1);
+        var refAge = VA.phenoage(age, VA.REFERENCE).phenoage;
+        $("blood-why-sub").textContent = "Against a typical healthy adult your age, who would score " +
+          refAge.toFixed(1) + ". Your markers move that by " +
+          signed(r.phenoage - refAge) + " years.";
+        r.warnings.forEach(note);
+        summary.push("Blood age (PhenoAge): " + r.phenoage.toFixed(1) + " (" + signed(r.phenoage - age) + " yrs)");
+      } else {
+        var rg = VA.range(age, known);
+        bv.textContent = "";
+        bv.appendChild(document.createTextNode(rg.low.toFixed(1) + "–" + rg.high.toFixed(1)));
+        bd.textContent = signed(rg.low - age) + " to " + signed(rg.high - age) + " years · " +
+          rg.missing.map(function (m) { return SHORT[m]; }).join(", ") + " not tested";
+        $("strip-blood").textContent = rg.low.toFixed(0) + "–" + rg.high.toFixed(0);
+        $("blood-why-sub").textContent = "Measured markers only. Missing values are assumed to sit within the usual range shown in the table, which is why blood age is a range.";
+        rg.warnings.forEach(note);
+        if (rg.high - rg.low > 5) note("The range is wider than 5 years. Testing the missing marker would narrow it a lot.");
+        summary.push("Blood age (PhenoAge): " + rg.low.toFixed(1) + " to " + rg.high.toFixed(1) +
+          " (" + rg.missing.map(function (m) { return SHORT[m]; }).join(", ") + " not tested)");
+      }
+      bars($("blood-bars"), parts);
+      why.hidden = false;
+    }
+
+    // Fitness Age
+    var fv = $("fit-v"), fd = $("fit-d"), fwhy = $("fit-why");
+    fwhy.hidden = true; fv.textContent = "–"; $("strip-fit").textContent = "–";
+    var band = { resting_hr: num("rhr"), steps: num("steps"), sleep_hours: num("sleep"), vo2max: num("vo2") };
+    var bandBad = Object.keys(band).some(function (k) { return band[k] !== null && (isNaN(band[k]) || band[k] <= 0); });
+    var anyBand = Object.keys(band).some(function (k) { return band[k] !== null; });
+    if (!anyBand) {
+      fd.textContent = "Optional: add band values";
+    } else if (!ageOk) {
+      fd.textContent = "Needs your age";
+    } else if (bandBad) {
+      fd.textContent = "Band values must be positive numbers";
+    } else {
+      var f = VA.fitness(age, sex, band);
+      if (!f) {
+        fd.textContent = "Choose a sex to use VO₂max";
+      } else {
+        fv.textContent = f.fitnessAge.toFixed(1);
+        fd.textContent = signed(f.fitnessAge - age) + " years vs calendar age";
+        $("strip-fit").textContent = f.fitnessAge.toFixed(1);
+        bars($("fit-bars"), f.parts);
+        fwhy.hidden = false;
+        summary.push("Fitness Age: " + f.fitnessAge.toFixed(1) + " (" + signed(f.fitnessAge - age) + " yrs)");
+      }
+      (f ? f.warnings : []).forEach(note);
+      if (!f && band.vo2max !== null && !sex) note("VO₂max needs a sex for its reference value.");
+    }
+
+    lastSummary = summary.length
+      ? "VitalAge, calendar age " + age.toFixed(1) + "\n" + summary.join("\n") +
+        "\nMethod: Phenotypic Age, Levine et al. 2018 (doi:10.18632/aging.101414). Not a diagnostic tool."
+      : "";
+    $("btn-copy").disabled = !lastSummary;
+  }
+
+  function fill(ex) {
+    $("age").value = ex ? ex.age : "";
+    $("sex").value = ex ? ex.sex : "";
+    VA.MARKERS.forEach(function (m) {
+      $("v-" + m).value = ex ? ex.blood[m][0] : "";
+      $("u-" + m).value = ex ? ex.blood[m][1] : MARKER_INFO[m].units[0];
+    });
+    $("rhr").value = ex ? ex.band.rhr : "";
+    $("steps").value = ex ? ex.band.steps : "";
+    $("sleep").value = ex ? ex.band.sleep : "";
+    $("vo2").value = ex ? ex.band.vo2 : "";
+    $("blood-panel").classList.toggle("is-example", !!ex);
+    update();
+  }
+
+  $("form").addEventListener("input", function (e) {
+    if (e.target.closest("#blood-panel") || e.target.id === "age") $("blood-panel").classList.remove("is-example");
+    update();
+  });
+  $("form").addEventListener("change", update);
+  $("form").addEventListener("submit", function (e) { e.preventDefault(); });
+  $("btn-example").addEventListener("click", function () { fill(EXAMPLE); });
+  $("btn-clear").addEventListener("click", function () { fill(null); $("age").focus(); });
+  $("btn-copy").addEventListener("click", function () {
+    var s = $("copy-status");
+    if (!lastSummary) return;
+    function fallback() { s.textContent = lastSummary; s.style.whiteSpace = "pre-wrap"; }
+    try {
+      navigator.clipboard.writeText(lastSummary).then(function () { s.style.whiteSpace = ""; s.textContent = "Copied."; }, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  fill(EXAMPLE);
+})();
+</script>

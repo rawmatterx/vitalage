@@ -44,6 +44,19 @@ meta-analyses (see [References](#references)). VitalAge is an independent
 implementation and is not affiliated with or endorsed by any of these
 authors. If you use VitalAge, please cite the papers above.
 
+## Easiest way: the web page
+
+Open [`web/vitalage.html`](web/vitalage.html) in any browser, or use the
+hosted copy. Type the values from your blood report, pick the unit printed on
+it, and add band values if you have them. Blood age, a range if a test is
+missing, the per-marker breakdown, Fitness Age and the citations update as
+you type. Everything is calculated in the browser and nothing is sent
+anywhere. The test suite runs the page's calculation code in Node and checks
+it against the Python package on hundreds of random cases.
+
+The rest of this README covers the Python tools, for repeated tests, band
+CSV exports and the trend dashboard.
+
 ## Tests you need
 
 All nine markers come from a standard package plus one add-on:
