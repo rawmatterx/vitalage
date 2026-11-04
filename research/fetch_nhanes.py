@@ -1,4 +1,4 @@
-"""Download the public NHANES 2003-2006 and 2011-2014 files used in research/
+"""Download the public NHANES 2003-2006, 2011-2014 and 2015-2018 files used in research/
 
     python3 research/fetch_nhanes.py            # into research/data/
 
@@ -54,6 +54,17 @@ FILES = [
     NHANES % ("2013", "PAXHD_H.xpt"),
     NHANES % ("2013", "PAXHR_H.xpt"),
     MORT % "NHANES_2013_2014_MORT_2019_PUBLIC.dat",
+    # 2015-2016 (I) and 2017-2018 (J): confirmatory test set, labs + hs-CRP only
+    NHANES % ("2015", "DEMO_I.xpt"),
+    NHANES % ("2015", "BIOPRO_I.xpt"),
+    NHANES % ("2015", "CBC_I.xpt"),
+    NHANES % ("2015", "HSCRP_I.xpt"),     # LBXHSCRP, mg/L
+    MORT % "NHANES_2015_2016_MORT_2019_PUBLIC.dat",
+    NHANES % ("2017", "DEMO_J.xpt"),
+    NHANES % ("2017", "BIOPRO_J.xpt"),
+    NHANES % ("2017", "CBC_J.xpt"),
+    NHANES % ("2017", "HSCRP_J.xpt"),
+    MORT % "NHANES_2017_2018_MORT_2019_PUBLIC.dat",
 ]
 
 

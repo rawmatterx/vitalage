@@ -1,0 +1,75 @@
+{
+  "trained_on": "NHANES 2003-2004 and 2005-2006, adults 20-84 with all 9 markers, NCHS linked mortality to 31 Dec 2019",
+  "n": 8540,
+  "deaths": 1755,
+  "refit": {
+    "features": [
+      "age",
+      "albumin",
+      "creatinine",
+      "glucose",
+      "crp",
+      "lymphocyte_pct",
+      "mcv",
+      "rdw",
+      "alp",
+      "wbc"
+    ],
+    "crp_scale": "ln(mg/dL)",
+    "marker_units": {
+      "albumin": "g/L",
+      "creatinine": "umol/L",
+      "glucose": "mmol/L",
+      "crp": "mg/dL",
+      "lymphocyte_pct": "%",
+      "mcv": "fL",
+      "rdw": "%",
+      "alp": "U/L",
+      "wbc": "10^3/uL"
+    },
+    "ridge": 0.03,
+    "ridge_cv_c": {
+      "0.0": 0.8657463442354875,
+      "0.001": 0.865870767363727,
+      "0.003": 0.8660553191673318,
+      "0.01": 0.8664634081640593,
+      "0.03": 0.8668806933111368,
+      "0.1": 0.8658407423258322
+    },
+    "a": -15.698130270808539,
+    "b": [
+      0.05531444333733779,
+      -0.028871669330608685,
+      0.0013479143855095559,
+      0.061116686168917043,
+      0.06948167904670413,
+      -0.01528214463801838,
+      0.038825864830687534,
+      0.19829798621802425,
+      0.0033657690646052784,
+      0.02627032708190841
+    ],
+    "gamma_per_month": 0.0076929097994352085
+  },
+  "comparator": {
+    "features": [
+      "age",
+      "pheno_accel"
+    ],
+    "accel_trend": {
+      "intercept": -7.155944354779851,
+      "slope": 1.0604280372675574
+    },
+    "accel_cap": [
+      -11.048187017773257,
+      21.00966572989385
+    ],
+    "a": -13.081412082028292,
+    "b": [
+      0.09400066447645104,
+      0.06629337237104871
+    ],
+    "gamma_per_month": 0.0092636358743412
+  },
+  "primary_test": "Harrell's C over all available follow-up in NHANES 2015-2018 (ages 20-79), refit minus comparator, paired bootstrap 95% CI (2000 resamples); success = CI excludes zero."
+}

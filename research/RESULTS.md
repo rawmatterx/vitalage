@@ -243,3 +243,30 @@ Deployed: **W1 + daily wrist activity volume (MIMS)**. Locked test: +0.0007 (-0.
 | Resting heart rate | BPXPLS, 60-second seated exam pulse | Band resting HR is lower than a seated clinic pulse; no conversion fitted. Moderate uncertainty. |
 
 Minutes of moderate-to-vigorous activity could not be computed: the hourly and daily files have no minute-level intensities, and the minute files were not downloaded.
+
+## 7. Confirmatory test of the marker refit, NHANES 2015-2018: pre-registration
+
+Committed before any 2015-2018 file was downloaded. Code:
+`research/confirm_2015.py`.
+
+- **Hypothesis.** A ridge-penalised Gompertz refit of age + the 9 PhenoAge
+  markers (R3b) ranks mortality risk better than PhenoAge. This was suggested
+  by both earlier locked test sets but was never chosen by cross-validation.
+- **Frozen models.** `research/frozen_refit_2003_06.json`, SHA-256
+  `9a7020de89d5d60145a696789bab069d9e9b99476d2d2b0ab3bc6534919a8e1a`. Both
+  models were fitted on all 8,540 NHANES 2003-2006 adults (1,755 deaths):
+  the refit, with a ridge penalty of 0.03 chosen by 5-fold CV on Harrell's
+  C, and the comparator (age + PhenoAge acceleration, capped at its
+  2.5th/97.5th percentiles in 2003-2006). Nothing is fitted on 2015-2018.
+- **Test data.** All NHANES 2015-2016 and 2017-2018 adults aged 20-79
+  (80 means "80 or older", the same rule as the wrist study) with all 9
+  markers. hs-CRP is `LBXHSCRP` in mg/L and is divided by 10 for mg/dL.
+  NCHS linked mortality runs to 31 Dec 2019, so follow-up is about 1-4 years.
+- **Primary test.** Harrell's C over all available follow-up, refit minus
+  comparator, with a paired bootstrap 95% CI (2,000 resamples). **Success =
+  the CI excludes zero.** Also reported: number of deaths; calibration
+  (24-month predicted vs Kaplan-Meier observed, by quintile); and the
+  minimum difference detectable with 80% power (2.8 x the bootstrap SE).
+- **Whatever the result, nothing changes in the package or the web page.**
+  Even a success makes the refit a candidate to confirm in another cohort,
+  such as LASI or UK Biobank.
