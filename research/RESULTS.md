@@ -193,3 +193,53 @@ was looked at. Code: `research/wrist.py`.
   20-84, because these cycles record everyone aged 80+ as 80. Sleep
   midpoint is kept on a noon-to-noon clock so that 23:50 and 00:10 are
   20 minutes apart.
+
+## 6. Wrist study results, NHANES 2011-2014
+
+Test set: 2236 of 7454 adults (88 deaths within 5 years), SHA-256 `f0d2b37200f1df39e8d9db29136e8e6160a3c57d3f4ad9b00fc3d0b1413544e4`, locked in commit 63ca11d before any model was fitted. Training: 5218 adults (209 deaths within 5 years). PhenoAge acceleration cap chosen in CV: 2.5/97.5 percentiles.
+
+| Model | CV n | CV change in 5-y C | Test n | Test change in 5-y C | Test calibration slope | Test predicted / observed 5-y mortality |
+|---|---|---|---|---|---|---|
+| B0 Blood: age + PhenoAge (CRP at reference) | 5218 | +0.0000 (+0.0000 to +0.0000) | 2236 | +0.0000 (+0.0000 to +0.0000) | 1.00 | 4.1% / 3.9% |
+| B1 Blood: ridge refit of 8 markers | 5218 | -0.0018 (-0.0124 to +0.0084) | 2236 | +0.0233 (+0.0098 to +0.0344) | 1.28 | 4.0% / 3.9% |
+| W5 + exam pulse | 5099 | +0.0005 (-0.0040 to +0.0041) | 2182 | +0.0039 (-0.0022 to +0.0097) | 0.99 | 4.2% / 4.0% |
+| W1 + daily wrist activity volume (MIMS) | 5218 | +0.0140 (+0.0057 to +0.0231) | 2236 | +0.0007 (-0.0115 to +0.0132) | 0.92 | 4.3% / 3.9% |
+| W2 + sleep duration | 5218 | +0.0015 (-0.0024 to +0.0055) | 2236 | -0.0001 (-0.0059 to +0.0059) | 0.98 | 4.2% / 3.9% |
+| W3 + sleep regularity and midpoint | 5207 | +0.0028 (-0.0017 to +0.0077) | 2230 | -0.0025 (-0.0094 to +0.0073) | 0.99 | 4.1% / 3.9% |
+| W4 + rest-activity rhythm | 5218 | +0.0079 (-0.0012 to +0.0165) | 2236 | +0.0085 (-0.0022 to +0.0210) | 0.89 | 4.1% / 3.9% |
+| W6 + MIMS + sleep duration + pulse | 5099 | +0.0164 (+0.0058 to +0.0271) | 2182 | +0.0059 (-0.0106 to +0.0188) | 0.90 | 4.4% / 4.0% |
+| W7 + all wrist features + pulse (ridge) | 5089 | +0.0190 (+0.0042 to +0.0323) | 2176 | +0.0184 (-0.0031 to +0.0346) | 0.87 | 4.4% / 4.0% |
+| W8 Ridge refit: 8 markers + all wrist + pulse | 5089 | +0.0169 (+0.0020 to +0.0340) | 2176 | +0.0265 (+0.0051 to +0.0485) | 0.90 | 4.2% / 4.0% |
+
+Blood baseline 5-year C: 0.8120 in CV, 0.8155 on the test set. Changes are against the blood baseline refitted on the same people.
+
+**Deployment decision (CV only):**
+
+- W5 + exam pulse vs B0 Blood: age + PhenoAge (CRP at reference): +0.0005 (-0.0040 to +0.0041) → rejected
+- W1 + daily wrist activity volume (MIMS) vs B0 Blood: age + PhenoAge (CRP at reference): +0.0140 (+0.0057 to +0.0231) → accepted
+- W2 + sleep duration vs W1 + daily wrist activity volume (MIMS): -0.0125 (-0.0185 to -0.0062) → rejected
+- W3 + sleep regularity and midpoint vs W1 + daily wrist activity volume (MIMS): -0.0095 (-0.0181 to -0.0015) → rejected
+- W4 + rest-activity rhythm vs W1 + daily wrist activity volume (MIMS): -0.0060 (-0.0166 to +0.0029) → rejected
+- W6 + MIMS + sleep duration + pulse vs W1 + daily wrist activity volume (MIMS): +0.0013 (-0.0030 to +0.0063) → rejected
+- W7 + all wrist features + pulse (ridge) vs W1 + daily wrist activity volume (MIMS): +0.0038 (-0.0050 to +0.0125) → rejected
+- W8 Ridge refit: 8 markers + all wrist + pulse vs W1 + daily wrist activity volume (MIMS): +0.0017 (-0.0079 to +0.0125) → rejected
+
+Deployed: **W1 + daily wrist activity volume (MIMS)**. Locked test: +0.0007 (-0.0115 to +0.0132).
+
+**Verdict: no combined VitalAge is shipped.** The model chosen in cross-validation did not beat the blood baseline on the locked test set; its 95% CI includes zero. With 88 deaths within 5 years the test set has limited power, so small real gains cannot be ruled out.
+
+**A pattern across both studies (hypothesis, not a result).** Penalised refits of the blood markers did better on both locked test sets than in cross-validation: in 2003-2006, R3b (+0.0058) and D7 (+0.0165); here B1 (+0.0233 (+0.0098 to +0.0344)) and W8 (+0.0265 (+0.0051 to +0.0485)). They were not chosen by the pre-registered rules, so they are not shipped. A future study could pre-register a marker refit as the primary candidate and test it on fresh data (for example NHANES 2015-2018, which has hs-CRP).
+
+**CRP.** Fixing CRP at the reference value shifts every PhenoAge by the same amount, so the CRP sensitivity analysis at 0.2 or 10 mg/L leaves every C-index above unchanged; only the PhenoAge level (calibration) would move.
+
+### How wrist features map to consumer bands
+
+| Feature | NHANES variable | Mapping and uncertainty |
+|---|---|---|
+| Daily activity volume | PAXMTSD, daily sum of MIMS units (wrist GT3X+) | Consumer bands do not report MIMS; they report steps, "active minutes" or proprietary scores. Open-source MIMS can be computed from raw band acceleration where a band exports it (few do). No validated conversion from band steps to MIMS. High uncertainty. |
+| Sleep duration | PAXSWMD, minutes classified as sleep wear by the NHANES algorithm | Bands report sleep time from their own algorithms (often heart rate + motion); they typically differ from actigraphy by tens of minutes a night. Moderate uncertainty. |
+| Sleep midpoint and regularity | from hourly sleep-wear minutes (PAXHR), noon-to-noon nights | Bands report bedtime and wake time, so midpoint and its night-to-night SD are directly computable; hourly resolution here limits precision to about 30 minutes. Moderate uncertainty. |
+| Rest-activity rhythm (IS, IV, RA) | from hourly MIMS (PAXHR) | Computable from any band's hourly step or activity counts, but values depend on the activity measure used. Moderate to high uncertainty. |
+| Resting heart rate | BPXPLS, 60-second seated exam pulse | Band resting HR is lower than a seated clinic pulse; no conversion fitted. Moderate uncertainty. |
+
+Minutes of moderate-to-vigorous activity could not be computed: the hourly and daily files have no minute-level intensities, and the minute files were not downloaded.

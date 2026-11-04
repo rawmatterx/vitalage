@@ -1,0 +1,294 @@
+{
+  "n_train": 5218,
+  "deaths_5y_train": 209,
+  "models": {
+    "B0 Blood: age + PhenoAge (CRP at reference)": {
+      "inputs": [
+        "accel"
+      ],
+      "kind": "gompertz",
+      "ridge": 0.0,
+      "n": 5218,
+      "deaths_5y": 209,
+      "c5": 0.8119916508474029,
+      "c5_base_same_rows": 0.8119916508474029,
+      "delta": 0.0,
+      "delta_ci": [
+        0.0,
+        0.0
+      ]
+    },
+    "B1 Blood: ridge refit of 8 markers": {
+      "inputs": [
+        "markers"
+      ],
+      "kind": "ridge",
+      "ridge": 0.01,
+      "n": 5218,
+      "deaths_5y": 209,
+      "c5": 0.8101640866784864,
+      "c5_base_same_rows": 0.8119916508474029,
+      "delta": -0.0018275641689164956,
+      "delta_ci": [
+        -0.012369382163698966,
+        0.008410109678974771
+      ]
+    },
+    "W5 + exam pulse": {
+      "inputs": [
+        "accel",
+        "pulse"
+      ],
+      "kind": "gompertz",
+      "ridge": 0.0,
+      "n": 5099,
+      "deaths_5y": 204,
+      "c5": 0.8125136942916217,
+      "c5_base_same_rows": 0.811973890214607,
+      "delta": 0.000539804077014705,
+      "delta_ci": [
+        -0.003985029005343266,
+        0.004120892995178118
+      ]
+    },
+    "W1 + daily wrist activity volume (MIMS)": {
+      "inputs": [
+        "accel",
+        "log_mims"
+      ],
+      "kind": "gompertz",
+      "ridge": 0.0,
+      "n": 5218,
+      "deaths_5y": 209,
+      "c5": 0.8259659405474241,
+      "c5_base_same_rows": 0.8119916508474029,
+      "delta": 0.013974289700021236,
+      "delta_ci": [
+        0.005652120704693805,
+        0.02311438987479777
+      ]
+    },
+    "W2 + sleep duration": {
+      "inputs": [
+        "accel",
+        "sleep_h",
+        "sleep_h2"
+      ],
+      "kind": "gompertz",
+      "ridge": 0.0,
+      "n": 5218,
+      "deaths_5y": 209,
+      "c5": 0.8134574057420366,
+      "c5_base_same_rows": 0.8119916508474029,
+      "delta": 0.0014657548946337418,
+      "delta_ci": [
+        -0.0024123733147698,
+        0.0055212610758542955
+      ]
+    },
+    "W3 + sleep regularity and midpoint": {
+      "inputs": [
+        "accel",
+        "sleep_sd",
+        "mid_c",
+        "sleep_mid_sd"
+      ],
+      "kind": "gompertz",
+      "ridge": 0.0,
+      "n": 5207,
+      "deaths_5y": 208,
+      "c5": 0.8166232539281835,
+      "c5_base_same_rows": 0.813872664891908,
+      "delta": 0.0027505890362754526,
+      "delta_ci": [
+        -0.001691042642420207,
+        0.007687308489380338
+      ]
+    },
+    "W4 + rest-activity rhythm": {
+      "inputs": [
+        "accel",
+        "is",
+        "iv",
+        "ra"
+      ],
+      "kind": "gompertz",
+      "ridge": 0.0,
+      "n": 5218,
+      "deaths_5y": 209,
+      "c5": 0.8199215415164272,
+      "c5_base_same_rows": 0.8119916508474029,
+      "delta": 0.007929890669024275,
+      "delta_ci": [
+        -0.0012446396669749532,
+        0.016524956298445588
+      ]
+    },
+    "W6 + MIMS + sleep duration + pulse": {
+      "inputs": [
+        "accel",
+        "log_mims",
+        "sleep_h",
+        "sleep_h2",
+        "pulse"
+      ],
+      "kind": "gompertz",
+      "ridge": 0.0,
+      "n": 5099,
+      "deaths_5y": 204,
+      "c5": 0.8283681981698451,
+      "c5_base_same_rows": 0.811973890214607,
+      "delta": 0.016394307955238108,
+      "delta_ci": [
+        0.005780577352459909,
+        0.027097611162179177
+      ]
+    },
+    "W7 + all wrist features + pulse (ridge)": {
+      "inputs": [
+        "accel",
+        "log_mims",
+        "sleep_h",
+        "sleep_h2",
+        "sleep_sd",
+        "mid_c",
+        "sleep_mid_sd",
+        "is",
+        "iv",
+        "ra",
+        "pulse"
+      ],
+      "kind": "ridge",
+      "ridge": 0.001,
+      "n": 5089,
+      "deaths_5y": 203,
+      "c5": 0.8310602383540653,
+      "c5_base_same_rows": 0.8120168837472372,
+      "delta": 0.019043354606828045,
+      "delta_ci": [
+        0.00420531718386406,
+        0.03229044626275239
+      ]
+    },
+    "W8 Ridge refit: 8 markers + all wrist + pulse": {
+      "inputs": [
+        "markers",
+        "log_mims",
+        "sleep_h",
+        "sleep_h2",
+        "sleep_sd",
+        "mid_c",
+        "sleep_mid_sd",
+        "is",
+        "iv",
+        "ra",
+        "pulse"
+      ],
+      "kind": "ridge",
+      "ridge": 0.001,
+      "n": 5089,
+      "deaths_5y": 203,
+      "c5": 0.8289151721067178,
+      "c5_base_same_rows": 0.8120168837472372,
+      "delta": 0.016898288359480595,
+      "delta_ci": [
+        0.0019967664898979613,
+        0.034002660286048196
+      ]
+    }
+  },
+  "choices": {
+    "accel_cap_percent": {
+      "tried": {
+        "0": 0.7979214484526244,
+        "1": 0.8108236051587735,
+        "2.5": 0.8128040598609171,
+        "5": 0.8117461713266625
+      },
+      "chosen": 2.5
+    },
+    "deploy_steps": [
+      {
+        "candidate": "W5 + exam pulse",
+        "vs": "B0 Blood: age + PhenoAge (CRP at reference)",
+        "gain": 0.000539804077014705,
+        "ci": [
+          -0.003985029005343266,
+          0.004120892995178118
+        ],
+        "accepted": false
+      },
+      {
+        "candidate": "W1 + daily wrist activity volume (MIMS)",
+        "vs": "B0 Blood: age + PhenoAge (CRP at reference)",
+        "gain": 0.013974289700021236,
+        "ci": [
+          0.005652120704693805,
+          0.02311438987479777
+        ],
+        "accepted": true
+      },
+      {
+        "candidate": "W2 + sleep duration",
+        "vs": "W1 + daily wrist activity volume (MIMS)",
+        "gain": -0.012508534805387495,
+        "ci": [
+          -0.01850280243677365,
+          -0.006153008404630825
+        ],
+        "accepted": false
+      },
+      {
+        "candidate": "W3 + sleep regularity and midpoint",
+        "vs": "W1 + daily wrist activity volume (MIMS)",
+        "gain": -0.00947717293187067,
+        "ci": [
+          -0.018132831958140035,
+          -0.0015234964006017996
+        ],
+        "accepted": false
+      },
+      {
+        "candidate": "W4 + rest-activity rhythm",
+        "vs": "W1 + daily wrist activity volume (MIMS)",
+        "gain": -0.006044399030996961,
+        "ci": [
+          -0.016629729898345925,
+          0.0029236603606012713
+        ],
+        "accepted": false
+      },
+      {
+        "candidate": "W6 + MIMS + sleep duration + pulse",
+        "vs": "W1 + daily wrist activity volume (MIMS)",
+        "gain": 0.0012817856957895168,
+        "ci": [
+          -0.003010030323334095,
+          0.006284726232109955
+        ],
+        "accepted": false
+      },
+      {
+        "candidate": "W7 + all wrist features + pulse (ridge)",
+        "vs": "W1 + daily wrist activity volume (MIMS)",
+        "gain": 0.003795734336704215,
+        "ci": [
+          -0.00498640547068454,
+          0.012542745058216896
+        ],
+        "accepted": false
+      },
+      {
+        "candidate": "W8 Ridge refit: 8 markers + all wrist + pulse",
+        "vs": "W1 + daily wrist activity volume (MIMS)",
+        "gain": 0.001650668089356766,
+        "ci": [
+          -0.007914175609528012,
+          0.012537742444931462
+        ],
+        "accepted": false
+      }
+    ],
+    "deployed_model": "W1 + daily wrist activity volume (MIMS)"
+  }
+}

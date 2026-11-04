@@ -339,6 +339,103 @@ def run_test():
     json.dump(res, open(TEST_OUT, "w"), indent=2, default=float)
 
 
+MAPPING = [
+    ("Daily activity volume", "PAXMTSD, daily sum of MIMS units (wrist GT3X+)",
+     "Consumer bands do not report MIMS; they report steps, \"active minutes\" or proprietary "
+     "scores. Open-source MIMS can be computed from raw band acceleration where a band exports "
+     "it (few do). No validated conversion from band steps to MIMS. High uncertainty."),
+    ("Sleep duration", "PAXSWMD, minutes classified as sleep wear by the NHANES algorithm",
+     "Bands report sleep time from their own algorithms (often heart rate + motion); they "
+     "typically differ from actigraphy by tens of minutes a night. Moderate uncertainty."),
+    ("Sleep midpoint and regularity", "from hourly sleep-wear minutes (PAXHR), noon-to-noon nights",
+     "Bands report bedtime and wake time, so midpoint and its night-to-night SD are directly "
+     "computable; hourly resolution here limits precision to about 30 minutes. Moderate uncertainty."),
+    ("Rest-activity rhythm (IS, IV, RA)", "from hourly MIMS (PAXHR)",
+     "Computable from any band's hourly step or activity counts, but values depend on the "
+     "activity measure used. Moderate to high uncertainty."),
+    ("Resting heart rate", "BPXPLS, 60-second seated exam pulse",
+     "Band resting HR is lower than a seated clinic pulse; no conversion fitted. Moderate uncertainty."),
+]
+
+
+def report():
+    cv, te = json.load(open(CV_OUT)), json.load(open(TEST_OUT))
+    sha = hashlib.sha256(open(LOCK, "rb").read()).hexdigest()
+    L = []
+    o = L.append
+    f = lambda x, ci: "%+.4f (%+.4f to %+.4f)" % (x, ci[0], ci[1])  # noqa: E731
+    o("## 6. Wrist study results, NHANES 2011-2014")
+    o("")
+    o("Test set: %d of %d adults (%d deaths within 5 years), SHA-256 `%s`, locked in commit "
+      "63ca11d before any model was fitted. Training: %d adults (%d deaths within 5 years). "
+      "PhenoAge acceleration cap chosen in CV: %s/%s percentiles."
+      % (te["n_test"], te["n_test"] + cv["n_train"], te["deaths_5y_test"], sha, cv["n_train"],
+         cv["deaths_5y_train"], cv["choices"]["accel_cap_percent"]["chosen"],
+         100 - cv["choices"]["accel_cap_percent"]["chosen"]))
+    o("")
+    o("| Model | CV n | CV change in 5-y C | Test n | Test change in 5-y C | Test calibration slope | Test predicted / observed 5-y mortality |")
+    o("|---|---|---|---|---|---|---|")
+    for name, *_ in CANDIDATES:
+        c, t = cv["models"][name], te["models"][name]
+        o("| %s | %d | %s | %d | %s | %.2f | %.1f%% / %.1f%% |" % (
+            name, c["n"], f(c["delta"], c["delta_ci"]), t["n"], f(t["delta"], t["delta_ci"]),
+            t["calibration_slope"], 100 * t["mean_predicted_5y"], 100 * t["observed_5y_km"]))
+    o("")
+    o("Blood baseline 5-year C: %.4f in CV, %.4f on the test set. Changes are against the "
+      "blood baseline refitted on the same people." % (
+          cv["models"][BASE]["c5"], te["models"][BASE]["c5"]))
+    o("")
+    o("**Deployment decision (CV only):**")
+    o("")
+    for s in cv["choices"]["deploy_steps"]:
+        o("- %s vs %s: %s → %s" % (s["candidate"], s["vs"], f(s["gain"], s["ci"]),
+                                  "accepted" if s["accepted"] else "rejected"))
+    dep = cv["choices"]["deployed_model"]
+    t = te["models"][dep]
+    o("")
+    o("Deployed: **%s**. Locked test: %s." % (dep, f(t["delta"], t["delta_ci"])))
+    o("")
+    if t["delta_ci"][0] > 0:
+        o("**Verdict: the deployed model beats the blood baseline on the locked test set.**")
+    else:
+        o("**Verdict: no combined VitalAge is shipped.** The model chosen in cross-validation "
+          "did not beat the blood baseline on the locked test set; its 95%% CI includes zero. "
+          "With %d deaths within 5 years the test set has limited power, so small real "
+          "gains cannot be ruled out." % te["deaths_5y_test"])
+    o("")
+    o("**A pattern across both studies (hypothesis, not a result).** Penalised refits of the "
+      "blood markers did better on both locked test sets than in cross-validation: in "
+      "2003-2006, R3b (+0.0058) and D7 (+0.0165); here B1 (%s) and W8 (%s). They were not "
+      "chosen by the pre-registered rules, so they are not shipped. A future study could "
+      "pre-register a marker refit as the primary candidate and test it on fresh data "
+      "(for example NHANES 2015-2018, which has hs-CRP)." % (
+          f(te["models"][CANDIDATES[1][0]]["delta"], te["models"][CANDIDATES[1][0]]["delta_ci"]),
+          f(te["models"][CANDIDATES[-1][0]]["delta"], te["models"][CANDIDATES[-1][0]]["delta_ci"])))
+    o("")
+    o("**CRP.** Fixing CRP at the reference value shifts every PhenoAge by the same amount, so "
+      "the CRP sensitivity analysis at 0.2 or 10 mg/L leaves every C-index above unchanged; "
+      "only the PhenoAge level (calibration) would move.")
+    o("")
+    o("### How wrist features map to consumer bands")
+    o("")
+    o("| Feature | NHANES variable | Mapping and uncertainty |")
+    o("|---|---|---|")
+    for a, b, c in MAPPING:
+        o("| %s | %s | %s |" % (a, b, c))
+    o("")
+    o("Minutes of moderate-to-vigorous activity could not be computed: the hourly and daily "
+      "files have no minute-level intensities, and the minute files were not downloaded.")
+    text = "\n".join(L) + "\n"
+    path = os.path.join(HERE, "RESULTS.md")
+    body = open(path).read()
+    marker = "## 6. Wrist study results, NHANES 2011-2014"
+    if marker in body:
+        body = body[:body.index(marker)].rstrip() + "\n"
+    open(path, "w").write(body + "\n" + text)
+    print(text)
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
-    {"build": build, "lock": lock, "cv": run_cv, "test": run_test}.get(cmd, lambda: sys.exit(__doc__))()
+    {"build": build, "lock": lock, "cv": run_cv, "test": run_test,
+     "report": report}.get(cmd, lambda: sys.exit(__doc__))()

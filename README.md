@@ -290,6 +290,17 @@ cross-validation, so picking it now would be cherry-picking. It is a
 candidate for a future study with fresh data. An earlier steps-based
 VitalAge (commit 8e3c108) was withdrawn for the same reason.
 
+**Second study, 24-hour wrist data (NHANES 2011–2014).** A second
+pre-registered study used wrist accelerometry, which is closer to a
+consumer band. It covered 7,454 adults aged 20–79, with 5-year mortality as
+the outcome; CRP wasn't measured in those years. Cross-validation chose
+blood + daily wrist activity volume (+0.014 in 5-year C), but on the locked
+test set the gain was +0.001 (95% CI −0.012 to +0.013), so again nothing
+ships. Sleep duration, sleep timing, rest-activity rhythm and resting pulse
+didn't help either. Penalised refits of the blood markers did well on both
+locked test sets without being chosen in cross-validation. That's a
+hypothesis for a future study with fresh data, not a result.
+
 So the app shows two separate numbers: **blood age** (PhenoAge, published
 and validated) and **Fitness Age** (literature-based, not a validated
 clock).
@@ -305,6 +316,10 @@ python3 research/fetch_nhanes.py
 .venv-research/bin/python research/ladder.py cv        # choices on the 70% only
 .venv-research/bin/python research/ladder.py test      # one look at the locked 30%
 .venv-research/bin/python research/ladder.py report    # section 4 of RESULTS.md
+.venv-research/bin/python research/wrist.py build      # 2011-14 wrist study
+.venv-research/bin/python research/wrist.py cv
+.venv-research/bin/python research/wrist.py test
+.venv-research/bin/python research/wrist.py report     # section 6 of RESULTS.md
 ```
 
 ## Tests
