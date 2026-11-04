@@ -1,0 +1,462 @@
+{
+  "n_train": 4089,
+  "deaths_train": 896,
+  "models": {
+    "D0 PhenoAge": {
+      "inputs": [
+        "accel"
+      ],
+      "rows": "both cycles",
+      "band_transferable": true,
+      "kind": "gompertz",
+      "n": 4089,
+      "deaths": 896,
+      "ridge": 0.0,
+      "boost_iters": 0,
+      "c10": 0.8684227537972308,
+      "c10_phenoage_same_rows": 0.8684227537972308,
+      "c5": 0.862884875505261,
+      "c5_phenoage_same_rows": 0.862884875505261,
+      "delta_c10": 0.0,
+      "delta_c10_ci": [
+        0.0,
+        0.0
+      ],
+      "delta_c5": 0.0
+    },
+    "D1 PhenoAge + resting pulse": {
+      "inputs": [
+        "accel",
+        "pulse"
+      ],
+      "rows": "both cycles",
+      "band_transferable": true,
+      "kind": "gompertz",
+      "n": 3981,
+      "deaths": 878,
+      "ridge": 0.0,
+      "boost_iters": 0,
+      "c10": 0.8665427394831068,
+      "c10_phenoage_same_rows": 0.8661427246619444,
+      "c5": 0.8601371288673174,
+      "c5_phenoage_same_rows": 0.8604038609468513,
+      "delta_c10": 0.0004000148211623644,
+      "delta_c10_ci": [
+        -0.0005930892294876255,
+        0.001372958952211678
+      ],
+      "delta_c5": -0.00026673207953387124
+    },
+    "D2 PhenoAge + MVPA": {
+      "inputs": [
+        "accel",
+        "log_mvpa"
+      ],
+      "rows": "both cycles",
+      "band_transferable": true,
+      "kind": "gompertz",
+      "n": 4089,
+      "deaths": 896,
+      "ridge": 0.0,
+      "boost_iters": 0,
+      "c10": 0.8717735659533418,
+      "c10_phenoage_same_rows": 0.8684227537972308,
+      "c5": 0.8648455647021794,
+      "c5_phenoage_same_rows": 0.862884875505261,
+      "delta_c10": 0.003350812156110994,
+      "delta_c10_ci": [
+        0.0006897315598599186,
+        0.005992212747538622
+      ],
+      "delta_c5": 0.001960689196918386
+    },
+    "D3 PhenoAge + steps": {
+      "inputs": [
+        "accel",
+        "log_steps_c"
+      ],
+      "rows": "2005-06 only",
+      "band_transferable": true,
+      "kind": "gompertz",
+      "n": 2004,
+      "deaths": 372,
+      "ridge": 0.0,
+      "boost_iters": 0,
+      "c10": 0.8796012570775997,
+      "c10_phenoage_same_rows": 0.8750670165329242,
+      "c5": 0.8612143202972424,
+      "c5_phenoage_same_rows": 0.8626559244490624,
+      "delta_c10": 0.00453424054467555,
+      "delta_c10_ci": [
+        -0.0007944359518567701,
+        0.009818180755224927
+      ],
+      "delta_c5": -0.0014416041518199307
+    },
+    "D4 PhenoAge + MVPA + pulse": {
+      "inputs": [
+        "accel",
+        "log_mvpa",
+        "pulse"
+      ],
+      "rows": "both cycles",
+      "band_transferable": true,
+      "kind": "gompertz",
+      "n": 3981,
+      "deaths": 878,
+      "ridge": 0.0,
+      "boost_iters": 0,
+      "c10": 0.8699500412017875,
+      "c10_phenoage_same_rows": 0.8661427246619444,
+      "c5": 0.8630902340335844,
+      "c5_phenoage_same_rows": 0.8604038609468513,
+      "delta_c10": 0.0038073165398431197,
+      "delta_c10_ci": [
+        0.0009465214889790908,
+        0.006816265370063951
+      ],
+      "delta_c5": 0.0026863730867331403
+    },
+    "D5 PhenoAge + steps + pulse": {
+      "inputs": [
+        "accel",
+        "log_steps_c",
+        "pulse"
+      ],
+      "rows": "2005-06 only",
+      "band_transferable": true,
+      "kind": "gompertz",
+      "n": 1959,
+      "deaths": 364,
+      "ridge": 0.0,
+      "boost_iters": 0,
+      "c10": 0.8788514389892155,
+      "c10_phenoage_same_rows": 0.8724183907628956,
+      "c5": 0.8594111325542534,
+      "c5_phenoage_same_rows": 0.8597740405444183,
+      "delta_c10": 0.0064330482263198485,
+      "delta_c10_ci": [
+        0.0009786661760994605,
+        0.011768850679450498
+      ],
+      "delta_c5": -0.0003629079901649179
+    },
+    "D6 PhenoAge + steps + peak cadence + pulse": {
+      "inputs": [
+        "accel",
+        "log_steps_c",
+        "peak30_cadence",
+        "pulse"
+      ],
+      "rows": "2005-06 only",
+      "band_transferable": true,
+      "kind": "gompertz",
+      "n": 1959,
+      "deaths": 364,
+      "ridge": 0.0,
+      "boost_iters": 0,
+      "c10": 0.8795725208841643,
+      "c10_phenoage_same_rows": 0.8724183907628956,
+      "c5": 0.8588484845074861,
+      "c5_phenoage_same_rows": 0.8597740405444183,
+      "delta_c10": 0.0071541301212686426,
+      "delta_c10_ci": [
+        0.0015231810652317796,
+        0.012436444647403653
+      ],
+      "delta_c5": -0.0009255560369322291
+    },
+    "D7 Refit 9 markers + steps + pulse (ridge)": {
+      "inputs": [
+        "markers",
+        "log_steps_c",
+        "pulse"
+      ],
+      "rows": "2005-06 only",
+      "band_transferable": true,
+      "kind": "ridge",
+      "n": 1959,
+      "deaths": 364,
+      "ridge": 0.001,
+      "boost_iters": 0,
+      "c10": 0.8764682406508785,
+      "c10_phenoage_same_rows": 0.8724183907628956,
+      "c5": 0.8548480568949705,
+      "c5_phenoage_same_rows": 0.8597740405444183,
+      "delta_c10": 0.004049849887982848,
+      "delta_c10_ci": [
+        -0.005194888312043449,
+        0.011533738207729767
+      ],
+      "delta_c5": -0.0049259836494478515,
+      "ridge_tried": {
+        "0.0": 0.8780759358191762,
+        "0.001": 0.8781598352849407,
+        "0.003": 0.878128089541138,
+        "0.01": 0.8778174347624965,
+        "0.03": 0.876295906613092
+      }
+    },
+    "R1 PhenoAge + total activity + wear time": {
+      "inputs": [
+        "accel",
+        "log_tac",
+        "log_wear"
+      ],
+      "rows": "both cycles",
+      "band_transferable": false,
+      "kind": "gompertz",
+      "n": 4089,
+      "deaths": 896,
+      "ridge": 0.0,
+      "boost_iters": 0,
+      "c10": 0.8733588429665764,
+      "c10_phenoage_same_rows": 0.8684227537972308,
+      "c5": 0.8677177825936375,
+      "c5_phenoage_same_rows": 0.862884875505261,
+      "delta_c10": 0.0049360891693456255,
+      "delta_c10_ci": [
+        0.0018093046975288212,
+        0.007604756082655851
+      ],
+      "delta_c5": 0.00483290708837647
+    },
+    "R2 PhenoAge + all hip features (ridge)": {
+      "inputs": [
+        "accel",
+        "log_mvpa",
+        "log_tac",
+        "log_wear",
+        "tlac_per_day",
+        "sed_frac",
+        "astp",
+        "satp",
+        "m10",
+        "is",
+        "iv"
+      ],
+      "rows": "both cycles",
+      "band_transferable": false,
+      "kind": "ridge",
+      "n": 4089,
+      "deaths": 896,
+      "ridge": 0.0,
+      "boost_iters": 0,
+      "c10": 0.8758710197140236,
+      "c10_phenoage_same_rows": 0.8684227537972308,
+      "c5": 0.8708900829513675,
+      "c5_phenoage_same_rows": 0.862884875505261,
+      "delta_c10": 0.007448265916792818,
+      "delta_c10_ci": [
+        0.004408786125264877,
+        0.010915104398040502
+      ],
+      "delta_c5": 0.008005207446106444,
+      "ridge_tried": {
+        "0.0": 0.8758048836278378,
+        "0.001": 0.8754945910129512,
+        "0.003": 0.8749187595257097,
+        "0.01": 0.8733245317639687,
+        "0.03": 0.8685249415093448
+      }
+    },
+    "R3 Refit 9 markers + all hip features (ridge)": {
+      "inputs": [
+        "markers",
+        "log_mvpa",
+        "log_tac",
+        "log_wear",
+        "tlac_per_day",
+        "sed_frac",
+        "astp",
+        "satp",
+        "m10",
+        "is",
+        "iv"
+      ],
+      "rows": "both cycles",
+      "band_transferable": false,
+      "kind": "ridge",
+      "n": 4089,
+      "deaths": 896,
+      "ridge": 0.0,
+      "boost_iters": 0,
+      "c10": 0.8733051384755384,
+      "c10_phenoage_same_rows": 0.8684227537972308,
+      "c5": 0.869803694173098,
+      "c5_phenoage_same_rows": 0.862884875505261,
+      "delta_c10": 0.004882384678307594,
+      "delta_c10_ci": [
+        0.00036015766910059156,
+        0.008881854832587521
+      ],
+      "delta_c5": 0.006918818667836946,
+      "ridge_tried": {
+        "0.0": 0.8741062304668561,
+        "0.001": 0.8738874343922566,
+        "0.003": 0.87362090099229,
+        "0.01": 0.8724960902633261,
+        "0.03": 0.8695587529618275
+      }
+    },
+    "R3b Refit 9 markers only (ridge)": {
+      "inputs": [
+        "markers"
+      ],
+      "rows": "both cycles",
+      "band_transferable": false,
+      "kind": "ridge",
+      "n": 4089,
+      "deaths": 896,
+      "ridge": 0.03,
+      "boost_iters": 0,
+      "c10": 0.8678521435799513,
+      "c10_phenoage_same_rows": 0.8684227537972308,
+      "c5": 0.8643480595607289,
+      "c5_phenoage_same_rows": 0.862884875505261,
+      "delta_c10": -0.0005706102172794436,
+      "delta_c10_ci": [
+        -0.0036999284095478257,
+        0.0030324773308664232
+      ],
+      "delta_c5": 0.0014631840554678588,
+      "ridge_tried": {
+        "0.0": 0.866383723561105,
+        "0.001": 0.8665637330588437,
+        "0.003": 0.8668725338823126,
+        "0.01": 0.8677193741437739,
+        "0.03": 0.8688586055231091
+      }
+    },
+    "R5 Ceiling: boosted trees, all features + pulse": {
+      "inputs": [
+        "markers",
+        "log_mvpa",
+        "pulse",
+        "log_tac",
+        "log_wear",
+        "tlac_per_day",
+        "sed_frac",
+        "astp",
+        "satp",
+        "m10",
+        "is",
+        "iv"
+      ],
+      "rows": "both cycles",
+      "band_transferable": false,
+      "kind": "boost",
+      "n": 3981,
+      "deaths": 878,
+      "ridge": 0.0,
+      "boost_iters": 400,
+      "c10": 0.8616611496107618,
+      "c10_phenoage_same_rows": 0.8661427246619444,
+      "c5": 0.8534319130643944,
+      "c5_phenoage_same_rows": 0.8604038609468513,
+      "delta_c10": -0.004481575051182629,
+      "delta_c10_ci": [
+        -0.010047786520014163,
+        0.0008090774335030276
+      ],
+      "delta_c5": -0.006971947882456919,
+      "boost_tried": {
+        "50": 0.8305507992729281,
+        "100": 0.8435310584240825,
+        "200": 0.8562563831458334,
+        "400": 0.8656774758516819
+      }
+    }
+  },
+  "choices": {
+    "accel_cap_percent": {
+      "tried": {
+        "0": 0.8632067051051588,
+        "1": 0.8679145501875928,
+        "2.5": 0.869048311665063,
+        "5": 0.8688767556520247
+      },
+      "chosen": 2.5
+    },
+    "steps": {
+      "tried": {
+        "log_steps_c": 0.8782805410141181,
+        "log_steps_raw": 0.8779514516979701
+      },
+      "chosen": "log_steps_c"
+    },
+    "deploy_steps": [
+      {
+        "candidate": "D1 PhenoAge + resting pulse",
+        "vs": "D0 PhenoAge",
+        "gain": 0.0004000148211623644,
+        "ci": [
+          -0.0005930892294876255,
+          0.001372958952211678
+        ],
+        "accepted": 0.0
+      },
+      {
+        "candidate": "D2 PhenoAge + MVPA",
+        "vs": "D0 PhenoAge",
+        "gain": 0.003350812156110994,
+        "ci": [
+          0.0006897315598599186,
+          0.005992212747538622
+        ],
+        "accepted": true
+      },
+      {
+        "candidate": "D3 PhenoAge + steps",
+        "vs": "D2 PhenoAge + MVPA",
+        "gain": -0.0005840790511766336,
+        "ci": [
+          -0.004532230710322752,
+          0.0028007102593726
+        ],
+        "accepted": 0.0
+      },
+      {
+        "candidate": "D4 PhenoAge + MVPA + pulse",
+        "vs": "D2 PhenoAge + MVPA",
+        "gain": 0.0002384954641503345,
+        "ci": [
+          -0.0007580963533445617,
+          0.0011561333047017009
+        ],
+        "accepted": 0.0
+      },
+      {
+        "candidate": "D5 PhenoAge + steps + pulse",
+        "vs": "D2 PhenoAge + MVPA",
+        "gain": 0.0001405882939836678,
+        "ci": [
+          -0.004308596251813535,
+          0.00360398098114153
+        ],
+        "accepted": 0.0
+      },
+      {
+        "candidate": "D6 PhenoAge + steps + peak cadence + pulse",
+        "vs": "D2 PhenoAge + MVPA",
+        "gain": 0.0008616701889324618,
+        "ci": [
+          -0.0026471850052756677,
+          0.005739527525905523
+        ],
+        "accepted": 0.0
+      },
+      {
+        "candidate": "D7 Refit 9 markers + steps + pulse (ridge)",
+        "vs": "D2 PhenoAge + MVPA",
+        "gain": -0.0022426100443533326,
+        "ci": [
+          -0.010173005666901654,
+          0.0038077844300881767
+        ],
+        "accepted": 0.0
+      }
+    ],
+    "deployed_model": "D2 PhenoAge + MVPA"
+  }
+}

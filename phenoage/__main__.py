@@ -9,7 +9,6 @@ import sys
 
 from .citations import short_phenoage_credit
 from .core import MARKERS, phenoage
-from .combined import vitalage
 from .explain import explain
 from .partial import MAX_MISSING, describe_interval, phenoage_range
 from .units import accepted_units, factor
@@ -38,21 +37,7 @@ def build_parser():
                             help="units: " + ", ".join(accepted_units(marker)).replace("%", "%%"))
     parser.add_argument("--explain", action="store_true",
                         help="show how many years each marker adds or removes")
-    parser.add_argument("--steps", type=float,
-                        help="typical daily steps from your band, to add the combined VitalAge")
     return parser
-
-
-def print_vitalage(r):
-    print("\nVitalAge (blood + steps): %.1f  (%+.1f years)" % (r.vitalage, r.difference))
-    print("  Typical person your age : %.1f" % r.baseline)
-    print("  Blood (PhenoAge)        : %+.1f yrs" % (round(r.blood_years, 1) + 0.0))
-    print("  Steps                   : %+.1f yrs" % (round(r.steps_years, 1) + 0.0))
-    print("  Band-to-hip step conversion is uncertain; VitalAge could be %.1f to %.1f."
-          % r.steps_range)
-    for warning in r.warnings:
-        print("warning: " + warning)
-    print("  Model: Gompertz fit on NHANES 2005-06 with mortality to 2019; see research/RESULTS.md.")
 
 
 def print_explanation(result, report):
@@ -117,12 +102,6 @@ def main(argv=None):
         print("warning: " + warning)
     if args.explain:
         print_explanation(result, report)
-    if args.steps is not None:
-        try:
-            print_vitalage(vitalage(result.chronological_age, result.phenoage, args.steps))
-        except ValueError as exc:
-            print("error: %s" % exc, file=sys.stderr)
-            return 2
     print("\n" + short_phenoage_credit())
     print("Not a diagnostic tool. Trained on US data; not validated for Indian populations.")
     return 0

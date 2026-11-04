@@ -442,6 +442,151 @@ def run_test():
         json.dump(res, f, indent=2, default=float)
 
 
+MAPPING = [
+    ("Steps", "PAXSTEP, counted in minutes >= 500 counts (hip ActiGraph 7164)",
+     "Wrist bands count about 1,400 more steps/day than hip ActiGraphs, limits of agreement "
+     "about -2,300 to +5,200; the studies used the newer GT3X and raw steps. High uncertainty."),
+    ("MVPA minutes", "minutes >= 2020 counts/min on the hip (Troiano 2008)",
+     "No validated mapping. Band \"active minutes\" use heart rate or cadence rules that differ "
+     "by brand; a cadence of about 100 steps/min is a common moderate-intensity threshold, but "
+     "the count cut-point and band minutes are not interchangeable. Very high uncertainty."),
+    ("Resting heart rate", "BPXPLS, 60-second seated pulse after 5 minutes' rest at the exam",
+     "Band resting HR is usually measured during sleep or long rest and runs several bpm lower "
+     "than a seated clinic pulse; no conversion was fitted. Moderate uncertainty."),
+    ("Peak 30-min cadence", "mean of each day's 30 highest step-minutes (hip)",
+     "Bands can report cadence, but rarely this summary; same step-count caveats. High uncertainty."),
+    ("Sleep duration and timing", "not available: NHANES 2003-06 asked people to remove the "
+     "monitor at night", "Cannot be tested with these data."),
+]
+
+
+def fmt(x, ci=None):
+    s = "%+.4f" % x
+    return s + (" (%+.4f to %+.4f)" % tuple(ci) if ci else "")
+
+
+def report():
+    cv = json.load(open(CV_OUT))
+    te = json.load(open(os.path.join(HERE, "ladder_test.json")))
+    sha = __import__("hashlib").sha256(open(LOCK, "rb").read()).hexdigest()
+    L = []
+    o = L.append
+    o("## 4. Guarded model ladder (final)")
+    o("")
+    o("This section supersedes the steps model in sections 3 and 'The combined VitalAge "
+      "model' above. That model was chosen after looking at results that included its "
+      "evaluation data, so its gain was preliminary.")
+    o("")
+    o("**Guardrails.** A 30%% test set (%d of %d adults with valid accelerometry, %d deaths, "
+      "stratified by death) was drawn and committed (`research/locked_test_seqn.txt`, "
+      "SHA-256 `%s`, commit 6c8ab38) before any ladder model was fitted. Every choice below "
+      "was made with 5-fold cross-validation in the other 70%% (%d adults, %d deaths). "
+      "The test set was used once, after the deployed model was fixed. Primary metric: "
+      "Harrell's C for 10-year mortality; secondary: 5-year C; plus calibration."
+      % (te["n_test"], te["n_test"] + cv["n_train"], te["deaths_test"], sha,
+         cv["n_train"], cv["deaths_train"]))
+    o("")
+    ch = cv["choices"]
+    o("**Choices made in CV.** PhenoAge acceleration cap: %s (tried %s). Steps: `%s` "
+      "(tried %s). Ridge penalties and boosting length per model, listed in "
+      "`research/ladder_cv.json`. Rest-activity L5 and relative amplitude were computed but "
+      "dropped before modelling: with the monitor off at night, L5 is 0 for most people and "
+      "amplitude is 1." % (
+          "%s/%s percentiles" % (ch["accel_cap_percent"]["chosen"], 100 - ch["accel_cap_percent"]["chosen"]),
+          ", ".join("%s%%: C10 %.4f" % (k, v) for k, v in ch["accel_cap_percent"]["tried"].items()),
+          ch["steps"]["chosen"],
+          ", ".join("%s: %.4f" % (k, v) for k, v in ch["steps"]["tried"].items())))
+    o("")
+    o("### Every model tried")
+    o("")
+    o("10-year C change vs PhenoAge (age + capped acceleration) refitted on the same people, "
+      "with paired bootstrap 95% CIs. D = band-transferable inputs, R = research-only "
+      "(hip-specific counts or a refit that needs no band).")
+    o("")
+    o("| Model | Rows | CV n (deaths) | CV change in 10-y C | Test n (deaths) | Test change in 10-y C | Test change in 5-y C | Test calibration slope |")
+    o("|---|---|---|---|---|---|---|---|")
+    for name, *_ in CANDIDATES:
+        c, t = cv["models"][name], te["models"][name]
+        slope = t.get("calibration_slope")
+        o("| %s | %s | %d (%d) | %s | %d (%d) | %s | %s | %s |" % (
+            name, c["rows"], c["n"], c["deaths"], fmt(c["delta_c10"], c["delta_c10_ci"]),
+            t["n"], t["deaths"], fmt(t["delta_c10"], t["delta_c10_ci"]),
+            fmt(t["delta_c5"], t["delta_c5_ci"]), "%.2f" % slope if slope else "n/a"))
+    o("")
+    o("Test 10-year C for PhenoAge alone: %.4f (all test rows)." % te["models"]["D0 PhenoAge"]["c10"])
+    o("")
+    o("### Deployment decision (made in CV, before the test)")
+    o("")
+    for s in ch["deploy_steps"]:
+        o("- %s vs %s: %s → %s" % (s["candidate"], s["vs"], fmt(s["gain"], s["ci"]),
+                                  "accepted" if s["accepted"] else "rejected"))
+    dep = ch["deployed_model"]
+    o("")
+    o("Deployed by the rule: **%s**." % dep)
+    o("")
+    t = te["models"][dep]
+    o("### Result on the locked test set")
+    o("")
+    helps = t["delta_c10_ci"][0] > 0
+    o("%s: 10-year C %.4f vs PhenoAge %.4f, change %s; 5-year change %s. Mean predicted "
+      "10-year mortality %.1f%% vs %.1f%% observed (Kaplan-Meier), calibration slope %.2f "
+      "(PhenoAge alone: %.1f%%, slope %.2f)." % (
+          dep, t["c10"], t["c10_phenoage"], fmt(t["delta_c10"], t["delta_c10_ci"]),
+          fmt(t["delta_c5"], t["delta_c5_ci"]), 100 * t["mean_predicted_10y"],
+          100 * t["observed_10y_km"], t["calibration_slope"],
+          100 * te["models"]["D0 PhenoAge"]["mean_predicted_10y"],
+          te["models"]["D0 PhenoAge"]["calibration_slope"]))
+    o("")
+    o("| Quintile of predicted risk | Predicted 10-y mortality | Observed (KM) |")
+    o("|---|---|---|")
+    for i, q in enumerate(t["calibration_quintiles"], 1):
+        o("| %d | %.1f%% | %.1f%% |" % (i, 100 * q["predicted"], 100 * q["observed"]))
+    o("")
+    o("### Verdict")
+    o("")
+    if helps:
+        o("**The deployed model beats PhenoAge on the locked test set.**")
+    else:
+        o("**No combined model is shipped.** The model the pre-registered rule chose did not "
+          "beat PhenoAge on the locked test set: the 95% CI of the 10-year C change includes "
+          "zero. The steps model shipped earlier (D3) also fails this test. Blood age "
+          "(PhenoAge) and the literature-based Fitness Age stay as they are.")
+        o("")
+        o("Some models not chosen in CV did well on the test set (notably D7, a ridge refit "
+          "of the 9 markers with steps and pulse, and the research-only refits R3/R3b). "
+          "Choosing one of them now would use the test set for selection, so they are "
+          "reported but not shipped. They are reasonable candidates for a future study with "
+          "a fresh test set, for example NHANES 2011-2014 wrist accelerometry.")
+    o("")
+    o("The boosted-tree ceiling (R5, a simple stump-boosted Cox model written for this study) "
+      "did worse than PhenoAge in CV and on the test set, so it says little about how much "
+      "signal a simple model misses; a tuned random survival forest would be a better ceiling.")
+    o("")
+    o("### How deployable inputs map from NHANES to a wrist band")
+    o("")
+    o("| Band input | NHANES variable used | Mapping and uncertainty |")
+    o("|---|---|---|")
+    for a, b, c in MAPPING:
+        o("| %s | %s | %s |" % (a, b, c))
+    o("")
+    o("Feature definitions follow Troiano et al. 2008 (wear, MVPA), Tudor-Locke et al. 2009 "
+      "(censored steps), van Someren et al. 1999 (rest-activity rhythm) and Smirnova et al. "
+      "2020, *J Gerontol A* 75(9):1779-1785, doi:10.1093/gerona/glz193 (total activity and "
+      "active/sedentary transition probabilities in NHANES 2003-06).")
+    text = "\n".join(L) + "\n"
+
+    path = os.path.join(HERE, "RESULTS.md")
+    body = open(path).read()
+    marker = "## 4. Guarded model ladder (final)"
+    if marker in body:
+        start = body.index(marker)
+        end = body.index("## Methods", start)
+        body = body[:start] + body[end:]
+    body = body.replace("## Methods", text + "\n## Methods", 1)
+    open(path, "w").write(body)
+    print(text)
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
-    {"lock": lock, "cv": run_cv, "test": run_test}.get(cmd, lambda: sys.exit(__doc__))()
+    {"lock": lock, "cv": run_cv, "test": run_test, "report": report}.get(cmd, lambda: sys.exit(__doc__))()

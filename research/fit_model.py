@@ -257,14 +257,14 @@ def main():
     primary = "PhenoAge + log censored steps (CV)"
     ship = summary[primary][1][0] > 0
     improved = sorted(k for k, v in summary.items() if v[1][0] > 0)
-    out("## Verdict")
+    out("## Preliminary verdict (superseded by section 4)")
     out("")
     out("Activity measures whose held-out C-index change has a 95%% CI above zero: %s."
         % (", ".join(improved) if improved else "none"))
     out("")
     if ship:
         out("**The combined VitalAge (PhenoAge + daily steps) beats PhenoAge alone on held-out "
-            "data, so it is shipped as `phenoage/combined.py`.** The gain is modest: "
+            "data, so it was shipped as `phenoage/combined.py` in commit 8e3c108. It is withdrawn: see section 4.** The gain is modest: "
             "%+.3f in C-index." % summary[primary][0])
     else:
         out("**The combined VitalAge does not clearly beat PhenoAge alone on held-out data "
@@ -286,7 +286,7 @@ def main():
     ref_steps = float(st.steps_censored_per_day.median())
     vital = (cb[0] + cb[1] * st.age + cb[2] * st.pheno_accel + cb[3] * st.log_steps_c + K - ab[0]) / ab[1]
     c_vital, c_pheno = c_index(vital.to_numpy(), s_t, s_d), c_index(st.phenoage.to_numpy(), s_t, s_d)
-    out("## The combined VitalAge model")
+    out("## The preliminary combined VitalAge model (withdrawn)")
     out("")
     out("Fitted on all %d people in 2005-06 with steps. It maps PhenoAge and censored hip steps "
         "to one age in years with Levine's method: the age whose 10-year mortality in an "
@@ -349,7 +349,7 @@ def main():
         "heldout_c_change": float(summary[primary][0]),
         "heldout_c_change_ci": [float(x) for x in summary[primary][1]],
     }
-    with open(os.path.join(HERE, "combined_params.json"), "w") as f:
+    with open(os.path.join(DATA, "combined_params.json"), "w") as f:
         json.dump(params, f, indent=2)
 
     out("## Methods")

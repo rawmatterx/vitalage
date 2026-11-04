@@ -38,13 +38,13 @@ Hazard ratios in the training fit of PhenoAge + log counts/min: per year of age 
 
 Hazard ratio per doubling of censored steps (beyond age and PhenoAge acceleration): 0.696 with all deaths, 0.719 after dropping 36 deaths in the first 2 years, a check for ill people moving less.
 
-## Verdict
+## Preliminary verdict (superseded by section 4)
 
 Activity measures whose held-out C-index change has a 95% CI above zero: PhenoAge + log censored steps (CV), PhenoAge + log counts/min, PhenoAge + log raw steps (CV), PhenoAge + log(1 + MVPA min/day).
 
-**The combined VitalAge (PhenoAge + daily steps) beats PhenoAge alone on held-out data, so it is shipped as `phenoage/combined.py`.** The gain is modest: +0.006 in C-index.
+**The combined VitalAge (PhenoAge + daily steps) beats PhenoAge alone on held-out data, so it was shipped as `phenoage/combined.py` in commit 8e3c108. It is withdrawn: see section 4.** The gain is modest: +0.006 in C-index.
 
-## The combined VitalAge model
+## The preliminary combined VitalAge model (withdrawn)
 
 Fitted on all 2885 people in 2005-06 with steps. It maps PhenoAge and censored hip steps to one age in years with Levine's method: the age whose 10-year mortality in an age-only Gompertz model equals the person's 10-year mortality in the combined model. Because that mapping is linear in the model's linear predictor, VitalAge splits exactly into years per input:
 
@@ -60,6 +60,80 @@ In-sample C-index (optimistic): VitalAge 0.866, PhenoAge 0.857. Mean VitalAge 48
 - **Steps.** The model uses hip ActiGraph 7164 steps counted only in minutes with >= 500 counts (censored), because the 7164's raw step function counts many spurious steps during light movement (Tudor-Locke 2009: 9,676 raw vs 6,540 censored steps/day for US adults). Wrist bands count more steps than hip ActiGraphs: about +1,400 steps/day for wrist Fitbits vs a hip GT3X in free living, with 95% limits of agreement of roughly -2,300 to +5,200 (Fitbit Charge 2 vs GT3X, PLoS One 2020; Fitbit Flex vs wGT3X: median +1,300, MAPE 15.5%). VitalAge therefore converts band steps as `hip_steps = band_steps - 1400` (never below 500). This chain is uncertain: the comparison studies used the newer GT3X and raw steps, not the 7164's censored steps, and band algorithms differ by brand. Across the limits of agreement, the hip-equivalent of 8,000 band steps ranges from about 3000 to 10300, which moves VitalAge by about 6.8 years.
 - **MVPA minutes.** Hip counts >= 2020/min have no reliable equivalent in band "active minutes", which use heart rate or proprietary cadence rules, so MVPA is reported here for research but not used in VitalAge.
 - **Counts per minute** have no band equivalent and are research-only.
+
+## 4. Guarded model ladder (final)
+
+This section supersedes the steps model in sections 3 and 'The combined VitalAge model' above. That model was chosen after looking at results that included its evaluation data, so its gain was preliminary.
+
+**Guardrails.** A 30% test set (1753 of 5842 adults with valid accelerometry, 384 deaths, stratified by death) was drawn and committed (`research/locked_test_seqn.txt`, SHA-256 `528a6e4c481b48611764338218beb4a8014663df0d4690733f3a3839ab3fa848`, commit 6c8ab38) before any ladder model was fitted. Every choice below was made with 5-fold cross-validation in the other 70% (4089 adults, 896 deaths). The test set was used once, after the deployed model was fixed. Primary metric: Harrell's C for 10-year mortality; secondary: 5-year C; plus calibration.
+
+**Choices made in CV.** PhenoAge acceleration cap: 2.5/97.5 percentiles (tried 0%: C10 0.8632, 1%: C10 0.8679, 2.5%: C10 0.8690, 5%: C10 0.8689). Steps: `log_steps_c` (tried log_steps_c: 0.8783, log_steps_raw: 0.8780). Ridge penalties and boosting length per model, listed in `research/ladder_cv.json`. Rest-activity L5 and relative amplitude were computed but dropped before modelling: with the monitor off at night, L5 is 0 for most people and amplitude is 1.
+
+### Every model tried
+
+10-year C change vs PhenoAge (age + capped acceleration) refitted on the same people, with paired bootstrap 95% CIs. D = band-transferable inputs, R = research-only (hip-specific counts or a refit that needs no band).
+
+| Model | Rows | CV n (deaths) | CV change in 10-y C | Test n (deaths) | Test change in 10-y C | Test change in 5-y C | Test calibration slope |
+|---|---|---|---|---|---|---|---|
+| D0 PhenoAge | both cycles | 4089 (896) | +0.0000 (+0.0000 to +0.0000) | 1753 (384) | +0.0000 (+0.0000 to +0.0000) | +0.0000 (+0.0000 to +0.0000) | 1.00 |
+| D1 PhenoAge + resting pulse | both cycles | 3981 (878) | +0.0004 (-0.0006 to +0.0014) | 1705 (374) | +0.0012 (-0.0009 to +0.0032) | +0.0016 (-0.0009 to +0.0043) | 1.00 |
+| D2 PhenoAge + MVPA | both cycles | 4089 (896) | +0.0034 (+0.0007 to +0.0060) | 1753 (384) | +0.0019 (-0.0022 to +0.0063) | +0.0045 (-0.0021 to +0.0110) | 0.98 |
+| D3 PhenoAge + steps | 2005-06 only | 2004 (372) | +0.0045 (-0.0008 to +0.0098) | 881 (163) | +0.0076 (-0.0017 to +0.0176) | +0.0146 (+0.0005 to +0.0278) | 0.97 |
+| D4 PhenoAge + MVPA + pulse | both cycles | 3981 (878) | +0.0038 (+0.0009 to +0.0068) | 1705 (374) | +0.0020 (-0.0025 to +0.0064) | +0.0049 (-0.0017 to +0.0120) | 0.99 |
+| D5 PhenoAge + steps + pulse | 2005-06 only | 1959 (364) | +0.0064 (+0.0010 to +0.0118) | 861 (162) | +0.0083 (-0.0006 to +0.0175) | +0.0142 (+0.0006 to +0.0321) | 0.99 |
+| D6 PhenoAge + steps + peak cadence + pulse | 2005-06 only | 1959 (364) | +0.0072 (+0.0015 to +0.0124) | 861 (162) | +0.0071 (-0.0039 to +0.0168) | +0.0120 (-0.0046 to +0.0261) | 0.99 |
+| D7 Refit 9 markers + steps + pulse (ridge) | 2005-06 only | 1959 (364) | +0.0040 (-0.0052 to +0.0115) | 861 (162) | +0.0165 (+0.0059 to +0.0292) | +0.0251 (+0.0092 to +0.0447) | 1.02 |
+| R1 PhenoAge + total activity + wear time | both cycles | 4089 (896) | +0.0049 (+0.0018 to +0.0076) | 1753 (384) | +0.0055 (+0.0011 to +0.0105) | +0.0100 (+0.0013 to +0.0185) | 0.98 |
+| R2 PhenoAge + all hip features (ridge) | both cycles | 4089 (896) | +0.0074 (+0.0044 to +0.0109) | 1753 (384) | +0.0063 (+0.0013 to +0.0113) | +0.0114 (+0.0026 to +0.0204) | 0.99 |
+| R3 Refit 9 markers + all hip features (ridge) | both cycles | 4089 (896) | +0.0049 (+0.0004 to +0.0089) | 1753 (384) | +0.0084 (+0.0017 to +0.0152) | +0.0147 (+0.0067 to +0.0251) | 1.00 |
+| R3b Refit 9 markers only (ridge) | both cycles | 4089 (896) | -0.0006 (-0.0037 to +0.0030) | 1753 (384) | +0.0058 (+0.0001 to +0.0117) | +0.0110 (+0.0040 to +0.0190) | 1.22 |
+| R5 Ceiling: boosted trees, all features + pulse | both cycles | 3981 (878) | -0.0045 (-0.0100 to +0.0008) | 1705 (374) | -0.0013 (-0.0092 to +0.0073) | +0.0063 (-0.0059 to +0.0172) | n/a |
+
+Test 10-year C for PhenoAge alone: 0.8472 (all test rows).
+
+### Deployment decision (made in CV, before the test)
+
+- D1 PhenoAge + resting pulse vs D0 PhenoAge: +0.0004 (-0.0006 to +0.0014) → rejected
+- D2 PhenoAge + MVPA vs D0 PhenoAge: +0.0034 (+0.0007 to +0.0060) → accepted
+- D3 PhenoAge + steps vs D2 PhenoAge + MVPA: -0.0006 (-0.0045 to +0.0028) → rejected
+- D4 PhenoAge + MVPA + pulse vs D2 PhenoAge + MVPA: +0.0002 (-0.0008 to +0.0012) → rejected
+- D5 PhenoAge + steps + pulse vs D2 PhenoAge + MVPA: +0.0001 (-0.0043 to +0.0036) → rejected
+- D6 PhenoAge + steps + peak cadence + pulse vs D2 PhenoAge + MVPA: +0.0009 (-0.0026 to +0.0057) → rejected
+- D7 Refit 9 markers + steps + pulse (ridge) vs D2 PhenoAge + MVPA: -0.0022 (-0.0102 to +0.0038) → rejected
+
+Deployed by the rule: **D2 PhenoAge + MVPA**.
+
+### Result on the locked test set
+
+D2 PhenoAge + MVPA: 10-year C 0.8491 vs PhenoAge 0.8472, change +0.0019 (-0.0022 to +0.0063); 5-year change +0.0045 (-0.0021 to +0.0110). Mean predicted 10-year mortality 13.6% vs 12.7% observed (Kaplan-Meier), calibration slope 0.98 (PhenoAge alone: 13.8%, slope 1.00).
+
+| Quintile of predicted risk | Predicted 10-y mortality | Observed (KM) |
+|---|---|---|
+| 1 | 0.5% | 0.6% |
+| 2 | 1.5% | 2.6% |
+| 3 | 4.3% | 4.8% |
+| 4 | 13.5% | 12.3% |
+| 5 | 48.1% | 43.3% |
+
+### Verdict
+
+**No combined model is shipped.** The model the pre-registered rule chose did not beat PhenoAge on the locked test set: the 95% CI of the 10-year C change includes zero. The steps model shipped earlier (D3) also fails this test. Blood age (PhenoAge) and the literature-based Fitness Age stay as they are.
+
+Some models not chosen in CV did well on the test set (notably D7, a ridge refit of the 9 markers with steps and pulse, and the research-only refits R3/R3b). Choosing one of them now would use the test set for selection, so they are reported but not shipped. They are reasonable candidates for a future study with a fresh test set, for example NHANES 2011-2014 wrist accelerometry.
+
+The boosted-tree ceiling (R5, a simple stump-boosted Cox model written for this study) did worse than PhenoAge in CV and on the test set, so it says little about how much signal a simple model misses; a tuned random survival forest would be a better ceiling.
+
+### How deployable inputs map from NHANES to a wrist band
+
+| Band input | NHANES variable used | Mapping and uncertainty |
+|---|---|---|
+| Steps | PAXSTEP, counted in minutes >= 500 counts (hip ActiGraph 7164) | Wrist bands count about 1,400 more steps/day than hip ActiGraphs, limits of agreement about -2,300 to +5,200; the studies used the newer GT3X and raw steps. High uncertainty. |
+| MVPA minutes | minutes >= 2020 counts/min on the hip (Troiano 2008) | No validated mapping. Band "active minutes" use heart rate or cadence rules that differ by brand; a cadence of about 100 steps/min is a common moderate-intensity threshold, but the count cut-point and band minutes are not interchangeable. Very high uncertainty. |
+| Resting heart rate | BPXPLS, 60-second seated pulse after 5 minutes' rest at the exam | Band resting HR is usually measured during sleep or long rest and runs several bpm lower than a seated clinic pulse; no conversion was fitted. Moderate uncertainty. |
+| Peak 30-min cadence | mean of each day's 30 highest step-minutes (hip) | Bands can report cadence, but rarely this summary; same step-count caveats. High uncertainty. |
+| Sleep duration and timing | not available: NHANES 2003-06 asked people to remove the monitor at night | Cannot be tested with these data. |
+
+Feature definitions follow Troiano et al. 2008 (wear, MVPA), Tudor-Locke et al. 2009 (censored steps), van Someren et al. 1999 (rest-activity rhythm) and Smirnova et al. 2020, *J Gerontol A* 75(9):1779-1785, doi:10.1093/gerona/glz193 (total activity and active/sedentary transition probabilities in NHANES 2003-06).
 
 ## Methods
 
