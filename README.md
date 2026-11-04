@@ -54,6 +54,26 @@ you type. Everything is calculated in the browser and nothing is sent
 anywhere. The test suite runs the page's calculation code in Node and checks
 it against the Python package on hundreds of random cases.
 
+**Import from a file** instead of typing:
+
+- **Blood report as a PDF**: the page reads the report's text in your
+  browser (with pdf.js), finds the nine markers by their usual names on
+  Indian reports (S. Albumin, Creatinine Serum, FBS, hs-CRP, Lymphocytes,
+  MCV, RDW-CV, ALP, TLC and others) and fills the form, along with age and
+  sex when the report shows them. It skips look-alike lines such as
+  post-prandial or random glucose, RDW-SD, absolute lymphocyte count and the
+  A/G ratio. Scanned photos have no text and cannot be read. Try it with
+  [`examples/sample_lab_report.pdf`](examples/sample_lab_report.pdf).
+- **Blood report as a CSV**: the blood history layout below (the newest row
+  is used), or simple rows of `test, value, unit`.
+- **Band data as a CSV**: one row per day with date, resting heart rate,
+  steps, sleep (hours or minutes) and VO₂max columns. The page uses the same
+  30-day medians and non-wear rules as `python3 -m phenoage.band`.
+
+Every imported value is highlighted, and the page lists what it found, what
+it could not find and any unit it had to guess, so check each value
+against your report.
+
 The rest of this README covers the Python tools, for repeated tests, band
 CSV exports and the trend dashboard.
 
