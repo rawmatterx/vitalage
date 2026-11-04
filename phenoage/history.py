@@ -23,6 +23,7 @@ from .internal import (internal_age_from_canonical, internal_age_range,
                        pace_from_history)
 from .partial import phenoage_range
 from .units import to_canonical
+from .vitalage import vitalage, vitalage_pace
 
 _HEADER = re.compile(r"^\s*([a-z_]+)\s*\(([^)]+)\)\s*$", re.IGNORECASE)
 
@@ -171,3 +172,38 @@ def internal_pace(points: List[BloodPoint]):
         return None
     return pace_from_history([((p.date - full[0].date).days / 365.2425, p.internal_age)
                               for p in full])
+
+
+def vitalage_now(blood_points: List[BloodPoint], fitness_points: List[FitnessPoint], born):
+    """VitalAge on the latest date we have data for (blood carried forward)."""
+    if not blood_points:
+        return None
+    full = [p for p in blood_points if not p.missing] or blood_points
+    b = full[-1]
+    f = fitness_points[-1] if fitness_points else None
+    as_of = max(b.date, f.date) if f else b.date
+    return vitalage(age_on(born, as_of), b.internal_age,
+                    None if f is None else f.fitness_age + (age_on(born, as_of) - f.age),
+                    blood_date=b.date, as_of=as_of)
+
+
+def vitalage_history(blood_points: List[BloodPoint], fitness_points: List[FitnessPoint]):
+    """VitalAge at each complete blood test, using the band window that ends
+    within 14 days of the test (no band data -> internal age alone)."""
+    out = []
+    for p in blood_points:
+        if p.missing:
+            continue
+        near = [f for f in fitness_points if abs((f.date - p.date).days) <= 14]
+        f = min(near, key=lambda f: abs((f.date - p.date).days)) if near else None
+        v = vitalage(p.age, p.internal_age, None if f is None else f.fitness_age - f.age + p.age)
+        out.append((p.date, v))
+    return out
+
+
+def vitalage_trend(blood_points: List[BloodPoint], fitness_points: List[FitnessPoint]):
+    hist = vitalage_history(blood_points, fitness_points)
+    if not hist:
+        return None
+    t0 = hist[0][0]
+    return vitalage_pace([((d - t0).days / 365.2425, v.vitalage) for d, v in hist])

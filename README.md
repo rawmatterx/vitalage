@@ -16,6 +16,10 @@ whether exercise, sleep and health habits are slowing it down.
 - **Levers:** how many years each marker adds or removes, and **Fitness
   Age** from your band (resting heart rate, steps, sleep, VO₂max), the
   fast-moving side you can change week to week.
+- **VitalAge v1 (beta)**: one combined number, internal age plus half of
+  the Fitness Age gap (capped at ±3 years). The blood part is validated
+  against DNA aging; the band weight is a judgment call until the pilot study
+  refits it (see "VitalAge v1 (beta) and the pilot" below).
 - **PhenoAge** (Levine 2018) is still computed and shown, as the published
   reference.
 
@@ -108,6 +112,46 @@ calendar speed.
 range it is a rough guide, and it is not validated in Indian populations.
 The study used one test per person, so it validates the "right now" score;
 how well test-to-test change tracks change in DNA aging is not yet known.
+
+## VitalAge v1 (beta) and the pilot
+
+```bash
+python3 -m phenoage --age 58 ...blood markers... \
+  --sex male --resting-hr 62 --steps 9000 --sleep 7.2 --vo2max 36
+```
+
+```
+VitalAge v1-beta        : 60.1  (+2.1 years vs calendar age)
+  Internal age (blood)     : +3.8 yrs
+  Band adjustment          : -1.7 yrs  (half of Fitness Age gap -3.4, capped at 3)
+```
+
+**Formula (v1-beta):** `VitalAge = internal age + clamp(0.5 × (Fitness Age −
+age), −3, +3)`, in `phenoage/vitalage.py`. Without band data, VitalAge equals
+internal age. If the last blood test is older than the band data, internal
+age is carried forward at calendar speed, with a note once it is a year old.
+The dashboard shows VitalAge with its blood and band parts, and its pace
+across complete tests.
+
+**Making it validated.** No public dataset measures blood, a band and DNA
+age in the same people, so the 0.5 weight cannot be fitted yet.
+`research/PILOT_PROTOCOL.md` describes a pilot that collects all three:
+- about 200 adults aged 30–75, with a 12-month repeat;
+- ethics committee approval and DPDP-compliant consent before recruiting;
+- an analysis plan fixed in advance, with a locked test set.
+
+Participants share a de-identified file:
+
+```bash
+python3 -m phenoage.pilot --born 1984-05-10 --sex male --smoking never \
+  --blood blood_history.csv --band band.csv --dna dna_tests.csv \
+  --device "Band model" --out vitalage_pilot.json
+```
+
+It keeps the birth year (not the date), sex, smoking status, the markers,
+monthly band medians and DNA-test results. Every date becomes days since the
+first blood test. If the pilot shows that band data adds to internal age, the
+fitted weights become VitalAge v2; if not, v2 drops the band weight to zero.
 
 ## Easiest way: the web page
 

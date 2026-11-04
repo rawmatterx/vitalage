@@ -15,7 +15,7 @@ from datetime import date
 from .band import read_rows
 from .citations import FITNESS, PHENOAGE
 from .history import (blood_trend, change_since_previous, fitness_trend,
-                      internal_pace, read_blood_history)
+                      internal_pace, read_blood_history, vitalage_now, vitalage_trend)
 
 MARKER_LABELS = {
     "albumin": "Albumin",
@@ -37,6 +37,8 @@ MARKER_LABELS = {
 def build_data(born, sex, blood_points, fitness_points):
     change = change_since_previous(blood_points)
     pace = internal_pace(blood_points)
+    vnow = vitalage_now(blood_points, fitness_points, born)
+    vpace = vitalage_trend(blood_points, fitness_points)
     return {
         "born": born.isoformat(),
         "sex": sex,
@@ -64,6 +66,13 @@ def build_data(born, sex, blood_points, fitness_points):
             "parts": {m: round(y, 2) for m, y in p.internal_parts.items()},
             "pace_estimate": None if p.pace_estimate is None else round(p.pace_estimate, 3),
         } for p in blood_points],
+        "vitalage": None if vnow is None else {
+            "value": round(vnow.vitalage, 2), "gap": round(vnow.gap, 2),
+            "blood": round(vnow.blood_years, 2),
+            "band": None if vnow.band_adjustment is None else round(vnow.band_adjustment, 2),
+            "as_of": vnow.as_of.isoformat(), "version": vnow.version, "warnings": vnow.warnings,
+            "pace": None if vpace is None else {"pace": round(vpace.pace, 2),
+                                                 "ci": [round(x, 1) for x in vpace.ci]}},
         "pace": None if pace is None else {"pace": round(pace.pace, 2), "ci": [round(x, 2) for x in pace.ci],
                                            "n": pace.n_tests, "years": round(pace.years, 1)},
         "fitness": [{
@@ -255,6 +264,9 @@ a { color: var(--series-1); }
       (GrimAge2) and 0.49 with DNA pace of aging (DunedinPoAm), beating PhenoAge on a locked test set
       (research/RESULTS.md). It is an estimate, not a DNA test. <strong>Pace of aging</strong> is how fast
       internal age moves per calendar year across repeat tests.</p>
+    <p class="note"><strong>VitalAge v1 (beta)</strong> = internal age + half of the Fitness Age gap, capped at
+      &plusmn;3 years. The blood part is validated against DNA aging; the band weight is a judgment call that
+      pilot data (blood + band + DNA-age test) will refit in a later version.</p>
     <p class="note">PhenoAge, shown in the tables, is <strong>Phenotypic Age</strong>, developed by
       Levine et al. (2018) on US NHANES III data and validated in NHANES IV by Liu et al. (2018). The published
       coefficients are used unchanged. It has not been validated for Indian populations.</p>
@@ -319,6 +331,13 @@ a { color: var(--series-1); }
     h("div", delta, c, "delta");
   }
   tile("Calendar age", age.toFixed(1), "years");
+  if (D.vitalage) {
+    var V = D.vitalage;
+    tile("VitalAge " + V.version, V.value.toFixed(1),
+      signed(V.gap) + " yrs \u00b7 blood " + signed(V.blood) + (V.band == null ? "" : ", band " + signed(V.band)) +
+      (V.pace ? " \u00b7 pace " + V.pace.pace.toFixed(2) + " (95% CI " + V.pace.ci[0] + " to " + V.pace.ci[1] + ")" : "") +
+      (V.warnings.length ? " \u00b7 " + V.warnings.join(" ") : ""));
+  }
   function rangeText(p) {
     return signed(p.low) + " to " + signed(p.high) + " yrs (" +
       p.missing.map(label).join(", ") + " not tested)";
