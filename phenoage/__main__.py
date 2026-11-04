@@ -10,8 +10,9 @@ import sys
 from .citations import short_phenoage_credit
 from .core import MARKERS, phenoage
 from .explain import explain
+from .internal import internal_age_from_canonical, internal_age_range
 from .partial import MAX_MISSING, describe_interval, phenoage_range
-from .units import accepted_units, factor
+from .units import accepted_units, factor, to_canonical
 
 EXAMPLE = (
     "example:\n"
@@ -54,12 +55,29 @@ def print_explanation(result, report):
           % ("Total", "", sum(c.years for c in exp.contributions)))
 
 
-def print_range(r, show_explain):
+def print_internal(r, show_explain):
+    print("\nInternal age      : %.1f  (%+.1f years vs calendar age)" % (r.internal_age, r.gap))
+    print("Pace estimate     : %.2f biological years per year (typical at your age %.2f)"
+          % (r.pace, r.typical_pace))
+    if show_explain:
+        print("\nWhat moves your internal age (vs a typical healthy adult your age):")
+        print("  Typical healthy adult your age: %+.1f yrs" % r.baseline_gap)
+        for m, y in sorted(r.contributions.items(), key=lambda kv: -abs(kv[1])):
+            print("  %-15s %+5.1f yrs" % (m, round(y, 1) + 0.0))
+    for warning in r.warnings:
+        print("warning: " + warning)
+    print("Internal age tracks DNA-methylation aging (GrimAge2, r = 0.49 in NHANES); it is an "
+          "estimate, not a DNA test.")
+
+
+def print_range(r, show_explain, internal=None):
     print("Chronological age : %.1f" % r.chronological_age)
     print("PhenoAge          : %.1f to %.1f (middle estimate %.1f)"
           % (r.low, r.high, r.estimate))
     print("Difference        : %+.1f to %+.1f years"
           % (r.low - r.chronological_age, r.high - r.chronological_age))
+    if internal is not None:
+        print("Internal age      : %.1f to %.1f" % internal)
     print("\nMissing marker(s), assumed within a normal lab range:")
     for m in r.missing:
         print("  %-15s %s" % (m, describe_interval(m)))
@@ -88,7 +106,9 @@ def main(argv=None):
 
     try:
         if len(report) < len(MARKERS):
-            return print_range(phenoage_range(args.age, report), args.explain)
+            known = {m: to_canonical(m, *report[m]) for m in report}
+            return print_range(phenoage_range(args.age, report), args.explain,
+                               internal_age_range(args.age, known))
         result = phenoage(args.age, report)
     except ValueError as exc:
         print("error: %s" % exc, file=sys.stderr)
@@ -97,11 +117,12 @@ def main(argv=None):
     print("Chronological age : %.1f" % result.chronological_age)
     print("PhenoAge          : %.1f" % result.phenoage)
     print("Difference        : %+.1f years" % result.acceleration)
-    print("10-yr mortality   : %.1f%% (model estimate)" % (100 * result.mortality_10yr))
     for warning in result.warnings:
         print("warning: " + warning)
     if args.explain:
         print_explanation(result, report)
+    print_internal(internal_age_from_canonical(result.chronological_age, result.canonical_values),
+                   args.explain)
     print("\n" + short_phenoage_credit())
     print("Not a diagnostic tool. Trained on US data; not validated for Indian populations.")
     return 0

@@ -1,13 +1,26 @@
 # VitalAge
 
-Two views of how old your body acts:
+VitalAge measures **how gracefully you are aging**: how much aging your body
+shows now, how fast that is changing, and what is driving it, so you can see
+whether exercise, sleep and health habits are slowing it down.
 
-- **Blood age:** Levine's **Phenotypic Age** (PhenoAge, 2018) from a routine
-  blood report. You enter values exactly as printed on an Indian lab report
-  (g/dL, mg/dL, mg/L, cells/cumm) and the calculator converts them to the
-  units the formula needs.
-- **Fitness Age:** resting heart rate, daily steps, sleep and VO₂max from a
-  fitness band, each turned into years using published mortality studies.
+- **Internal age** (main number): a blood score from a routine report, built
+  to track DNA-methylation aging. In US adults aged 50-84 it correlated 0.49
+  with DNA internal age (GrimAge2) and 0.49 with DNA pace of aging
+  (DunedinPoAm), clearly better than PhenoAge (see below). It is an estimate
+  that correlates with DNA age, not a DNA test.
+- **Pace of aging:** how fast internal age moves per calendar year across
+  repeat blood tests (1.00 = calendar speed), with a 95% confidence interval.
+  It needs 3 or more complete tests spanning at least a year; before that you
+  get a single-test pace estimate.
+- **Levers:** how many years each marker adds or removes, and **Fitness
+  Age** from your band (resting heart rate, steps, sleep, VO₂max), the
+  fast-moving side you can change week to week.
+- **PhenoAge** (Levine 2018) is still computed and shown, as the published
+  reference.
+
+Values are entered exactly as printed on an Indian lab report (g/dL, mg/dL,
+mg/L, cells/cumm) and converted automatically.
 
 The Python package is still called `phenoage`.
 
@@ -43,6 +56,58 @@ Fitness Age is **not** a published clock; it combines effects from separate
 meta-analyses (see [References](#references)). VitalAge is an independent
 implementation and is not affiliated with or endorsed by any of these
 authors. If you use VitalAge, please cite the papers above.
+
+## Internal age and pace of aging
+
+```bash
+python3 -m phenoage --age 58 --albumin 4.1 g/dL --creatinine 1.0 mg/dL \
+  --glucose 112 mg/dL --crp 3.5 mg/L --lymphocyte_pct 24 % --mcv 93 fL \
+  --rdw 14.1 % --alp 96 U/L --wbc 8400 cells/cumm --explain
+```
+
+```
+Internal age      : 61.8  (+3.8 years vs calendar age)
+Pace estimate     : 1.18 biological years per year (typical at your age 1.11)
+
+What moves your internal age (vs a typical healthy adult your age):
+  Typical healthy adult your age: -1.0 yrs
+  rdw              +1.0 yrs
+  wbc              +0.9 yrs
+  crp              +0.8 yrs
+  lymphocyte_pct   +0.7 yrs
+  ...
+```
+
+**How it was built.** NHANES 1999-2002 measured routine blood tests and, for
+adults aged 50+, DNA methylation clocks (CDC public file `dnmepi`). A ridge
+regression of the 9 PhenoAge markers and age was fitted to predict how much
+older or younger each person's DNA looks than their birthday (GrimAge2
+acceleration) and their DNA pace of aging (DunedinPoAm). The plan and a
+locked 30% test set were committed before fitting. On that test set:
+
+| DNA measure (beyond calendar age) | PhenoAge | Internal-age score | Gain (95% CI) |
+|---|---|---|---|
+| Internal age (GrimAge2) | 0.38 | 0.49 | +0.11 (+0.06 to +0.16) |
+| Pace of aging (DunedinPoAm) | 0.30 | 0.49 | +0.19 (+0.12 to +0.25) |
+
+The final weights were refitted on all 2,388 people
+(`phenoage/internal_age_params.json`, exported by `research/dna_age.py`).
+
+**What drives it.** Lower lymphocyte %, higher RDW, MCV, white cells and
+CRP, then glucose and ALP. Part of this is the blood signature of smoking,
+which GrimAge builds in; for everyone else, inflammation and blood sugar are
+the parts that respond to weight, exercise and sleep.
+
+**Pace from repeat tests.** On the dashboard, pace is the slope of internal
+age over complete tests (3+, spanning a year or more), with its 95% CI.
+Single tests are noisy (a cold raises CRP and WBC), so read the interval:
+a pace whose interval includes 1.00 is not yet distinguishable from
+calendar speed.
+
+**Limits.** Fitted on US adults aged 50-84 around 2000. Outside that age
+range it is a rough guide, and it is not validated in Indian populations.
+The study used one test per person, so it validates the "right now" score;
+how well test-to-test change tracks change in DNA aging is not yet known.
 
 ## Easiest way: the web page
 
@@ -301,9 +366,8 @@ didn't help either. Penalised refits of the blood markers did well on both
 locked test sets without being chosen in cross-validation. That's a
 hypothesis for a future study with fresh data, not a result.
 
-So the app shows two separate numbers: **blood age** (PhenoAge, published
-and validated) and **Fitness Age** (literature-based, not a validated
-clock).
+So VitalAge reports internal age, pace and Fitness Age side by side rather
+than a single death-risk-based number.
 
 To reproduce (about 1 GB of downloads):
 

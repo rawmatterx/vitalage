@@ -15,7 +15,7 @@ from datetime import date
 from .band import read_rows
 from .citations import FITNESS, PHENOAGE
 from .history import (blood_trend, change_since_previous, fitness_trend,
-                      read_blood_history)
+                      internal_pace, read_blood_history)
 
 MARKER_LABELS = {
     "albumin": "Albumin",
@@ -36,6 +36,7 @@ MARKER_LABELS = {
 
 def build_data(born, sex, blood_points, fitness_points):
     change = change_since_previous(blood_points)
+    pace = internal_pace(blood_points)
     return {
         "born": born.isoformat(),
         "sex": sex,
@@ -52,6 +53,19 @@ def build_data(born, sex, blood_points, fitness_points):
             "parts": {m: round(y, 2) for m, y in p.contributions.items()},
             "warnings": p.warnings,
         } for p in blood_points],
+        "internal": [{
+            "date": p.date.isoformat(),
+            "age": round(p.age, 2),
+            "value": round(p.internal_age, 2),
+            "diff": round(p.internal_age - p.age, 2),
+            "low": round(p.internal_low - p.age, 2),
+            "high": round(p.internal_high - p.age, 2),
+            "missing": p.missing,
+            "parts": {m: round(y, 2) for m, y in p.internal_parts.items()},
+            "pace_estimate": None if p.pace_estimate is None else round(p.pace_estimate, 3),
+        } for p in blood_points],
+        "pace": None if pace is None else {"pace": round(pace.pace, 2), "ci": [round(x, 2) for x in pace.ci],
+                                           "n": pace.n_tests, "years": round(pace.years, 1)},
         "fitness": [{
             "date": p.date.isoformat(),
             "age": round(p.age, 2),
@@ -218,7 +232,7 @@ a { color: var(--series-1); }
   </section>
 
   <section class="card">
-    <h2 id="parts-title">What drives your latest blood age</h2>
+    <h2 id="parts-title">What drives your internal age</h2>
     <p class="sub" id="parts-sub" style="margin:0"></p>
     <div class="legend">
       <span class="bar" style="--c: var(--older)">Adds years</span>
@@ -236,7 +250,12 @@ a { color: var(--series-1); }
 
   <section class="card refs">
     <h2>Scientific basis</h2>
-    <p class="note" style="margin-top:0">Blood age is <strong>Phenotypic Age (PhenoAge)</strong>, developed by
+    <p class="note" style="margin-top:0"><strong>Internal age</strong> is a blood score built to track
+      DNA-methylation aging: in NHANES 1999-2002 adults aged 50-84 it correlated 0.49 with DNA internal age
+      (GrimAge2) and 0.49 with DNA pace of aging (DunedinPoAm), beating PhenoAge on a locked test set
+      (research/RESULTS.md). It is an estimate, not a DNA test. <strong>Pace of aging</strong> is how fast
+      internal age moves per calendar year across repeat tests.</p>
+    <p class="note">PhenoAge, shown in the tables, is <strong>Phenotypic Age</strong>, developed by
       Levine et al. (2018) on US NHANES III data and validated in NHANES IV by Liu et al. (2018). The published
       coefficients are used unchanged. It has not been validated for Indian populations.</p>
     <ol id="refs-pheno"></ol>
@@ -281,7 +300,7 @@ a { color: var(--series-1); }
   function last(a) { return a[a.length - 1]; }
 
   var series = [
-    { key: "blood", name: "Blood age (PhenoAge)", color: "--series-1", points: D.blood, dots: true },
+    { key: "internal", name: "Internal age (blood)", color: "--series-1", points: D.internal, dots: true },
     { key: "fitness", name: "Fitness Age (band)", color: "--series-2", points: D.fitness, dots: false }
   ].filter(function (s) { return s.points.length; });
 
@@ -304,11 +323,22 @@ a { color: var(--series-1); }
     return signed(p.low) + " to " + signed(p.high) + " yrs (" +
       p.missing.map(label).join(", ") + " not tested)";
   }
-  if (D.blood.length) {
-    var b = last(D.blood);
-    tile("Blood age", b.value.toFixed(1),
+  if (D.internal.length) {
+    var b = last(D.internal);
+    tile("Internal age", b.value.toFixed(1),
       (b.missing.length ? rangeText(b) : signed(b.diff) + " yrs") + " · test of " + fmtDate(b.date),
       "--series-1");
+    if (D.pace) {
+      tile("Pace of aging", D.pace.pace.toFixed(2),
+        "internal-age years per calendar year (1.00 = calendar speed), 95% CI " + D.pace.ci[0].toFixed(1) + " to " + D.pace.ci[1].toFixed(1) +
+        " · " + D.pace.n + " tests over " + D.pace.years + " years");
+    } else {
+      var pe = null;
+      for (var i = D.internal.length - 1; i >= 0; i--) { if (D.internal[i].pace_estimate != null) { pe = D.internal[i]; break; } }
+      tile("Pace of aging", pe ? pe.pace_estimate.toFixed(2) : "\u2013",
+        pe ? "estimate from one test; 3+ complete tests over a year give a measured pace"
+           : "needs a complete blood test");
+    }
   }
   if (D.fitness.length) {
     var f = last(D.fitness);
@@ -389,7 +419,7 @@ a { color: var(--series-1); }
       if (m.r > 40) {
         var lp = last(s.points);
         el("text", { x: x(lp.date) + 8, y: y(lp.diff) + 4, "class": "dlabel" }, svg)
-          .textContent = (s.key === "blood" ? "Blood " : "Fitness ") + signed(lp.diff);
+          .textContent = (s.key === "internal" ? "Internal " : "Fitness ") + signed(lp.diff);
       }
     });
 
@@ -418,7 +448,7 @@ a { color: var(--series-1); }
         h("i", null, row);
         h("strong", (p.missing && p.missing.length ? signed(p.low) + " to " + signed(p.high)
           : signed(p.diff)) + " yrs", row);
-        h("span", (s.key === "blood" ? "Blood, " : "Fitness, ") + fmtDate(p.date) +
+        h("span", (s.key === "internal" ? "Internal, " : "Fitness, ") + fmtDate(p.date) +
           (p.missing && p.missing.length ? " (" + p.missing.map(label).join(", ") + " not tested)" : ""), row);
       });
       tip.style.display = "block";
@@ -491,13 +521,13 @@ a { color: var(--series-1); }
 
   function drawAll() {
     drawTrend();
-    var lb = D.blood.length ? last(D.blood) : null;
+    var lb = D.internal.length ? last(D.internal) : null;
     if (lb) {
       var markerSum = Object.keys(lb.parts).reduce(function (s, k) { return s + lb.parts[k]; }, 0);
       var baseline = lb.value - markerSum;
       document.getElementById("parts-sub").textContent = lb.missing.length
         ? "Test of " + fmtDate(lb.date) + ". " + lb.missing.map(label).join(", ") +
-          " not tested, so only the measured markers are shown; blood age is a range of " +
+          " not tested, so only the measured markers are shown; internal age is a range of " +
           signed(lb.low) + " to " + signed(lb.high) + " yrs."
         : "Test of " + fmtDate(lb.date) + ". A typical healthy adult your age (reference values) scores " +
           baseline.toFixed(1) + " (" + signed(baseline - lb.age) + " yrs); your markers move that by " +
@@ -509,8 +539,12 @@ a { color: var(--series-1); }
 
   // Tables (built once)
   var trendRows = [];
+  D.internal.forEach(function (p) {
+    trendRows.push([p.date, p.missing.length ? "Internal age (range)" : "Internal age", p.age.toFixed(1), p.value.toFixed(1),
+      p.missing.length ? signed(p.low) + " to " + signed(p.high) : signed(p.diff)]);
+  });
   D.blood.forEach(function (p) {
-    trendRows.push([p.date, p.missing.length ? "Blood (range)" : "Blood", p.age.toFixed(1), p.value.toFixed(1),
+    trendRows.push([p.date, p.missing.length ? "PhenoAge (range)" : "PhenoAge", p.age.toFixed(1), p.value.toFixed(1),
       p.missing.length ? signed(p.low) + " to " + signed(p.high) : signed(p.diff)]);
   });
   D.fitness.forEach(function (p) { trendRows.push([p.date, "Fitness", p.age.toFixed(1), p.value.toFixed(1), signed(p.diff)]); });

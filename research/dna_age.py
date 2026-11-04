@@ -4,6 +4,7 @@
     .venv-research/bin/python research/dna_age.py lock     # once: research/locked_test_dna.txt
     .venv-research/bin/python research/dna_age.py cv       # 70% only -> research/dna_age_cv.json
     .venv-research/bin/python research/dna_age.py test     # once -> research/dna_age_test.json
+    .venv-research/bin/python research/dna_age.py export   # refit on all rows -> internal_age_params.json
 """
 
 import hashlib
@@ -216,6 +217,37 @@ def run_test():
     json.dump(res, open(TEST_OUT, "w"), indent=2)
 
 
+
+
+def export():
+    """Refit the validated scores on all rows (after the locked test) for the package."""
+    cv = json.load(open(CV_OUT))
+    json.load(open(TEST_OUT))                  # refuse to export before the test has run
+    df = load()
+    out = {"source": "NHANES 1999-2002 adults 50-84 with CDC DNA methylation clocks; "
+                     "research/dna_age.py, RESULTS.md sections 9-10",
+           "n": int(len(df)), "features": ["age"] + MARKERS, "crp_scale": "ln(mg/dL)",
+           "examples": []}
+    for name, col in PRIMARY.items():
+        lam = cv["targets"][name]["S1"]["chosen"]
+        line = AgeResid(df, col)
+        r = Ridge(lam).fit(X_of(df, False), line(df))
+        out[name] = {"target": col, "ridge": lam, "mu": r.mu.tolist(), "sd": r.sd.tolist(),
+                     "beta": r.beta.tolist(), "intercept": float(r.y0),
+                     "target_age_line": {"intercept": float(line.icpt), "slope": float(line.slope)}}
+    rows = df.sample(5, random_state=1)
+    for _, row in rows.iterrows():
+        x = X_of(row.to_frame().T.astype({c: float for c in ["age", "ln_crp"] + MARKERS}), False)
+        ex = {"age": float(row.age), **{m: float(row[m]) for m in MARKERS}}
+        for name in PRIMARY:
+            p = out[name]
+            ex[name] = float((p["intercept"] + ((x - np.array(p["mu"])) / np.array(p["sd"])) @ np.array(p["beta"]))[0])
+        out["examples"].append(ex)
+    json.dump(out, open(os.path.join(HERE, "internal_age_params.json"), "w"), indent=2)
+    print(json.dumps({k: v for k, v in out.items() if k != "examples"}, indent=2)[:1500])
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
-    {"build": build, "lock": lock, "cv": run_cv, "test": run_test}.get(cmd, lambda: sys.exit(__doc__))()
+    {"build": build, "lock": lock, "cv": run_cv, "test": run_test,
+     "export": export}.get(cmd, lambda: sys.exit(__doc__))()

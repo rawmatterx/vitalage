@@ -19,7 +19,10 @@ from .band import summarise
 from .core import MARKERS, phenoage
 from .explain import REFERENCE_PROFILE, explain, marker_years
 from .fitness import fitness_age
+from .internal import (internal_age_from_canonical, internal_age_range,
+                       pace_from_history)
 from .partial import phenoage_range
+from .units import to_canonical
 
 _HEADER = re.compile(r"^\s*([a-z_]+)\s*\(([^)]+)\)\s*$", re.IGNORECASE)
 
@@ -39,10 +42,18 @@ class BloodPoint:
     low: float = None                   # range when markers are missing
     high: float = None
     missing: List[str] = field(default_factory=list)
+    internal_low: float = None          # internal age (tracks DNA aging); a range
+    internal_high: float = None         # when markers are missing
+    internal_parts: Dict[str, float] = field(default_factory=dict)
+    pace_estimate: float = None         # single-test pace estimate (full report only)
 
     def __post_init__(self):
         if self.low is None:
             self.low = self.high = self.phenoage
+
+    @property
+    def internal_age(self):
+        return (self.internal_low + self.internal_high) / 2
 
     @property
     def difference(self):
@@ -100,18 +111,23 @@ def blood_trend(tests, born):
     for day, report in tests:
         age = age_on(born, day)
         try:
+            known = {m: to_canonical(m, *report[m]) for m in report}
             if len(report) == len(MARKERS):
                 result = phenoage(age, report)
                 exp = explain(result)
+                ia = internal_age_from_canonical(age, known)
                 points.append(BloodPoint(day, age, result.phenoage,
                                          {c.marker: c.years for c in exp.contributions},
-                                         result.warnings))
+                                         result.warnings, internal_low=ia.internal_age,
+                                         internal_high=ia.internal_age,
+                                         internal_parts=ia.contributions, pace_estimate=ia.pace))
             else:
                 r = phenoage_range(age, report)
                 parts = {m: marker_years(m, v, REFERENCE_PROFILE[m])
                          for m, v in r.known_values.items()}
+                ilo, ihi = internal_age_range(age, known)
                 points.append(BloodPoint(day, age, r.estimate, parts, r.warnings,
-                                         r.low, r.high, r.missing))
+                                         r.low, r.high, r.missing, ilo, ihi))
         except ValueError as exc:
             raise ValueError("Test on %s: %s" % (day, exc))
     return points
@@ -145,3 +161,13 @@ def change_since_previous(points: List[BloodPoint]) -> Optional[Dict[str, float]
         return None
     a, b = points[-2].contributions, points[-1].contributions
     return {m: b[m] - a[m] for m in b if m in a}
+
+
+def internal_pace(points: List[BloodPoint]):
+    """Pace of aging: slope of internal age across complete blood tests
+    (tests with untested markers would add guesswork to the slope)."""
+    full = [p for p in points if not p.missing]
+    if not full:
+        return None
+    return pace_from_history([((p.date - full[0].date).days / 365.2425, p.internal_age)
+                              for p in full])
