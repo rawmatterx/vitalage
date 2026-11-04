@@ -46,6 +46,9 @@ def build_data(born, sex, blood_points, fitness_points):
             "age": round(p.age, 2),
             "value": round(p.phenoage, 2),
             "diff": round(p.difference, 2),
+            "low": round(p.low - p.age, 2),     # range of diff when markers are missing
+            "high": round(p.high - p.age, 2),
+            "missing": p.missing,
             "parts": {m: round(y, 2) for m, y in p.contributions.items()},
             "warnings": p.warnings,
         } for p in blood_points],
@@ -297,9 +300,15 @@ a { color: var(--series-1); }
     h("div", delta, c, "delta");
   }
   tile("Calendar age", age.toFixed(1), "years");
+  function rangeText(p) {
+    return signed(p.low) + " to " + signed(p.high) + " yrs (" +
+      p.missing.map(label).join(", ") + " not tested)";
+  }
   if (D.blood.length) {
     var b = last(D.blood);
-    tile("Blood age", b.value.toFixed(1), signed(b.diff) + " yrs · test of " + fmtDate(b.date), "--series-1");
+    tile("Blood age", b.value.toFixed(1),
+      (b.missing.length ? rangeText(b) : signed(b.diff) + " yrs") + " · test of " + fmtDate(b.date),
+      "--series-1");
   }
   if (D.fitness.length) {
     var f = last(D.fitness);
@@ -330,7 +339,9 @@ a { color: var(--series-1); }
     var t0 = Math.min.apply(null, all.map(function (p) { return Date.parse(p.date); }));
     var t1 = Math.max.apply(null, all.map(function (p) { return Date.parse(p.date); }));
     if (t1 === t0) { t0 -= 15 * 864e5; t1 += 15 * 864e5; }
-    var ymax = Math.max(2, Math.max.apply(null, all.map(function (p) { return Math.abs(p.diff); })));
+    var ymax = Math.max(2, Math.max.apply(null, all.map(function (p) {
+      return Math.max(Math.abs(p.diff), Math.abs(p.low || 0), Math.abs(p.high || 0));
+    })));
     var step = niceStep(2 * ymax, 4);
     ymax = Math.ceil(ymax / step) * step;
     function x(d) { return m.l + (Date.parse(d) - t0) / (t1 - t0) * (W - m.l - m.r); }
@@ -361,6 +372,17 @@ a { color: var(--series-1); }
       var dpath = s.points.map(function (p, i) { return (i ? "L" : "M") + x(p.date) + "," + y(p.diff); }).join("");
       el("path", { d: dpath, fill: "none", stroke: color, "stroke-width": 2,
         "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+      // Range whisker for tests with untested markers
+      if (s.dots) s.points.forEach(function (p) {
+        if (!p.missing || !p.missing.length) return;
+        var xx = x(p.date);
+        el("line", { x1: xx, x2: xx, y1: y(p.high), y2: y(p.low), stroke: color,
+          "stroke-width": 2, "stroke-linecap": "round", opacity: 0.6 }, svg);
+        [p.low, p.high].forEach(function (end) {
+          el("line", { x1: xx - 5, x2: xx + 5, y1: y(end), y2: y(end), stroke: color,
+            "stroke-width": 2, "stroke-linecap": "round", opacity: 0.6 }, svg);
+        });
+      });
       if (s.dots) s.points.forEach(function (p) {
         el("circle", { cx: x(p.date), cy: y(p.diff), r: 4.5, fill: color, stroke: v("--surface"), "stroke-width": 2 }, svg);
       });
@@ -389,11 +411,15 @@ a { color: var(--series-1); }
       h("div", fmtDate(anchor.date), tip, "when");
       series.forEach(function (s) {
         var p = nearest(s.points, Date.parse(anchor.date));
+        // Only show a series that has a point near this date
+        if (Math.abs(Date.parse(p.date) - Date.parse(anchor.date)) > 21 * 864e5) return;
         var row = h("div", null, tip, "row");
         row.style.setProperty("--c", "var(" + s.color + ")");
         h("i", null, row);
-        h("strong", signed(p.diff) + " yrs", row);
-        h("span", (s.key === "blood" ? "Blood, " : "Fitness, ") + fmtDate(p.date), row);
+        h("strong", (p.missing && p.missing.length ? signed(p.low) + " to " + signed(p.high)
+          : signed(p.diff)) + " yrs", row);
+        h("span", (s.key === "blood" ? "Blood, " : "Fitness, ") + fmtDate(p.date) +
+          (p.missing && p.missing.length ? " (" + p.missing.map(label).join(", ") + " not tested)" : ""), row);
       });
       tip.style.display = "block";
       var left = xx / W * box.clientWidth + 12;
@@ -469,10 +495,13 @@ a { color: var(--series-1); }
     if (lb) {
       var markerSum = Object.keys(lb.parts).reduce(function (s, k) { return s + lb.parts[k]; }, 0);
       var baseline = lb.value - markerSum;
-      document.getElementById("parts-sub").textContent =
-        "Test of " + fmtDate(lb.date) + ". A typical healthy adult your age (reference values) scores " +
-        baseline.toFixed(1) + " (" + signed(baseline - lb.age) + " yrs); your markers move that by " +
-        signed(markerSum) + " yrs to " + lb.value.toFixed(1) + ".";
+      document.getElementById("parts-sub").textContent = lb.missing.length
+        ? "Test of " + fmtDate(lb.date) + ". " + lb.missing.map(label).join(", ") +
+          " not tested, so only the measured markers are shown; blood age is a range of " +
+          signed(lb.low) + " to " + signed(lb.high) + " yrs."
+        : "Test of " + fmtDate(lb.date) + ". A typical healthy adult your age (reference values) scores " +
+          baseline.toFixed(1) + " (" + signed(baseline - lb.age) + " yrs); your markers move that by " +
+          signed(markerSum) + " yrs to " + lb.value.toFixed(1) + ".";
     }
     drawBars("parts", lb && lb.parts, "Add a blood test history to see this.");
     drawBars("fit-parts", D.fitness.length ? last(D.fitness).parts : null, "Add band data to see this.");
@@ -480,18 +509,22 @@ a { color: var(--series-1); }
 
   // Tables (built once)
   var trendRows = [];
-  D.blood.forEach(function (p) { trendRows.push([p.date, "Blood", p.age.toFixed(1), p.value.toFixed(1), signed(p.diff)]); });
+  D.blood.forEach(function (p) {
+    trendRows.push([p.date, p.missing.length ? "Blood (range)" : "Blood", p.age.toFixed(1), p.value.toFixed(1),
+      p.missing.length ? signed(p.low) + " to " + signed(p.high) : signed(p.diff)]);
+  });
   D.fitness.forEach(function (p) { trendRows.push([p.date, "Fitness", p.age.toFixed(1), p.value.toFixed(1), signed(p.diff)]); });
   trendRows.sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
   table("trend-table", ["Date", "Measure", "Calendar age", "Body age", "Difference"], trendRows);
 
   if (D.blood.length) {
-    var mk = Object.keys(D.blood[0].parts);
+    var mk = [];
+    D.blood.forEach(function (p) { Object.keys(p.parts).forEach(function (k) { if (mk.indexOf(k) < 0) mk.push(k); }); });
     var head = ["Marker"].concat(D.blood.map(function (p) { return p.date; }));
     if (D.change) head.push("Change");
     var rows = mk.map(function (k) {
-      var r = [label(k)].concat(D.blood.map(function (p) { return signed(p.parts[k]); }));
-      if (D.change) r.push(signed(D.change[k]));
+      var r = [label(k)].concat(D.blood.map(function (p) { return k in p.parts ? signed(p.parts[k]) : "not tested"; }));
+      if (D.change) r.push(k in D.change ? signed(D.change[k]) : "–");
       return r;
     });
     table("parts-table", head, rows);

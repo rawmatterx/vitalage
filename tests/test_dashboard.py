@@ -33,6 +33,17 @@ class HistoryTests(unittest.TestCase):
         diffs = [p.difference for p in points]
         self.assertEqual(diffs, sorted(diffs, reverse=True))
 
+    def test_untested_marker_becomes_a_range(self):
+        points = blood_trend(read_blood_history(BLOOD), BORN)
+        sept = points[1]                         # CRP blank in the sample
+        self.assertEqual(sept.missing, ["crp"])
+        self.assertLess(sept.low, sept.phenoage)
+        self.assertLess(sept.phenoage, sept.high)
+        self.assertNotIn("crp", sept.contributions)
+        full = points[-1]
+        self.assertEqual(full.low, full.high)
+        self.assertEqual(full.missing, [])
+
     def test_change_since_previous(self):
         points = blood_trend(read_blood_history(BLOOD), BORN)
         change = change_since_previous(points)

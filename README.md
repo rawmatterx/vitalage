@@ -83,6 +83,32 @@ Difference        : -5.6 years
 10-yr mortality   : 1.4% (model estimate)
 ```
 
+### If a marker was not tested
+
+Leave it out (up to 3 markers). Instead of guessing, the calculator assumes
+only that the missing value lies inside a common adult lab reference
+interval and reports the lowest and highest PhenoAge that allows. Here CRP
+was not tested:
+
+```
+Chronological age : 42.0
+PhenoAge          : 34.5 to 38.6 (middle estimate 36.2)
+Difference        : -7.5 to -3.4 years
+
+Missing marker(s), assumed within a normal lab range:
+  crp             0.2-10 mg/L
+```
+
+Because PhenoAge is a straight line in the weighted marker sum, the
+extremes sit exactly at the interval ends, so the range is exact rather than
+simulated. The middle estimate uses the typical healthy value. Assumed
+intervals: albumin 3.5–5.0 g/dL, creatinine 0.6–1.3 mg/dL, fasting glucose
+70–100 mg/dL, CRP 0.2–10 mg/L, lymphocytes 20–40 %, MCV 80–100 fL, RDW
+11.5–14.5 %, ALP 40–130 U/L, WBC 4,000–11,000 cells/cumm. Your lab's
+interval may differ, and a value outside it (for example CRP during an
+infection) would put PhenoAge outside the range. CRP alone spans about
+4 years, so adding hs-CRP to the panel is worth it.
+
 ### Which markers drive the result
 
 Add `--explain` to see how many years each marker adds or removes compared
@@ -199,8 +225,9 @@ date,albumin (g/dL),creatinine (mg/dL),glucose (mg/dL),crp (mg/L),lymphocyte_pct
 2026-10-25,4.4,0.90,93,1.0,32,88,13.1,76,6500
 ```
 
-Either `--blood` or `--band` can be left out. The example files are made-up
-sample data.
+Leave a cell blank if that marker was not tested; the test then shows as a
+range (a vertical bar on the chart). Either `--blood` or `--band` can be left
+out. The example files are made-up sample data.
 
 ## Tests
 
@@ -219,7 +246,7 @@ and the Fitness Age curves against the published numbers.
 3. **Band Fitness Age** from resting HR, steps, sleep and VO₂max (done,
    `python3 -m phenoage.band`)
 4. **Dashboard with trends over time** (done, `python3 -m phenoage.dashboard`)
-5. Missing-marker handling with a range instead of a single number
+5. **Missing-marker handling** with a range instead of a single number (done)
 6. Refit a combined blood + activity model on NHANES 2003–2006
 
 ## References

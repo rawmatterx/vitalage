@@ -1,6 +1,7 @@
 """Command line: python -m phenoage --age 42 --albumin 4.3 g/dL ...
 
 Every marker takes a value and a unit, exactly as printed on the report.
+Leave out up to 3 markers to get a range instead of a single number.
 """
 
 import argparse
@@ -9,6 +10,7 @@ import sys
 from .citations import short_phenoage_credit
 from .core import MARKERS, phenoage
 from .explain import explain
+from .partial import MAX_MISSING, describe_interval, phenoage_range
 from .units import accepted_units, factor
 
 EXAMPLE = (
@@ -29,7 +31,7 @@ def build_parser():
     parser.add_argument("--age", type=float, required=True,
                         help="chronological age in years")
     for marker in MARKERS:
-        parser.add_argument("--" + marker, nargs=2, required=True,
+        parser.add_argument("--" + marker, nargs=2,
                             metavar=("VALUE", "UNIT"),
                             # argparse treats % as a format character
                             help="units: " + ", ".join(accepted_units(marker)).replace("%", "%%"))
@@ -52,10 +54,30 @@ def print_explanation(result, report):
           % ("Total", "", sum(c.years for c in exp.contributions)))
 
 
+def print_range(r, show_explain):
+    print("Chronological age : %.1f" % r.chronological_age)
+    print("PhenoAge          : %.1f to %.1f (middle estimate %.1f)"
+          % (r.low, r.high, r.estimate))
+    print("Difference        : %+.1f to %+.1f years"
+          % (r.low - r.chronological_age, r.high - r.chronological_age))
+    print("\nMissing marker(s), assumed within a normal lab range:")
+    for m in r.missing:
+        print("  %-15s %s" % (m, describe_interval(m)))
+    for warning in r.warnings:
+        print("warning: " + warning)
+    if show_explain:
+        print("\n(--explain needs all 9 markers.)")
+    print("\n" + short_phenoage_credit())
+    print("Not a diagnostic tool. Trained on US data; not validated for Indian populations.")
+    return 0
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
     report = {}
     for marker in MARKERS:
+        if getattr(args, marker) is None:
+            continue
         value, unit = getattr(args, marker)
         try:
             report[marker] = (float(value), unit)
@@ -65,6 +87,8 @@ def main(argv=None):
             return 2
 
     try:
+        if len(report) < len(MARKERS):
+            return print_range(phenoage_range(args.age, report), args.explain)
         result = phenoage(args.age, report)
     except ValueError as exc:
         print("error: %s" % exc, file=sys.stderr)

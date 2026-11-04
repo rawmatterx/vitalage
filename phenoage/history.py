@@ -1,7 +1,9 @@
 """Turn repeated blood tests and daily band data into trends over time.
 
 Blood history CSV: one row per test, a `date` column, and one column per
-marker named "marker (unit)", using the units printed on the report:
+marker named "marker (unit)", using the units printed on the report. A blank
+cell (or a missing column) means "not tested"; up to 3 can be missing per
+test, and that test then shows as a range:
 
     date,albumin (g/dL),creatinine (mg/dL),glucose (mg/dL),crp (mg/L),...
     2025-11-02,4.3,0.9,95,1.2,...
@@ -9,14 +11,15 @@ marker named "marker (unit)", using the units printed on the report:
 
 import csv
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Dict, List, Optional
 
 from .band import summarise
 from .core import MARKERS, phenoage
-from .explain import explain
+from .explain import REFERENCE_PROFILE, explain, marker_years
 from .fitness import fitness_age
+from .partial import phenoage_range
 
 _HEADER = re.compile(r"^\s*([a-z_]+)\s*\(([^)]+)\)\s*$", re.IGNORECASE)
 
@@ -30,9 +33,16 @@ def age_on(born, day):
 class BloodPoint:
     date: date
     age: float
-    phenoage: float
-    contributions: Dict[str, float]     # marker -> years vs reference
+    phenoage: float                     # middle estimate when markers are missing
+    contributions: Dict[str, float]     # measured marker -> years vs reference
     warnings: List[str]
+    low: float = None                   # range when markers are missing
+    high: float = None
+    missing: List[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        if self.low is None:
+            self.low = self.high = self.phenoage
 
     @property
     def difference(self):
@@ -73,17 +83,13 @@ def read_blood_history(path):
             columns[marker] = (name, match.group(2).strip())
         if date_col is None:
             raise ValueError("%s needs a 'date' column" % path)
-        missing = [m for m in MARKERS if m not in columns]
-        if missing:
-            raise ValueError("%s is missing columns for: %s" % (path, ", ".join(missing)))
         for line in reader:
             day = date.fromisoformat(line[date_col].strip())
             report = {}
             for marker, (col, unit) in columns.items():
                 text = (line[col] or "").strip()
-                if not text:
-                    raise ValueError("%s: %s is blank on %s" % (path, marker, day))
-                report[marker] = (float(text), unit)
+                if text:          # blank = not tested; becomes a range later
+                    report[marker] = (float(text), unit)
             tests.append((day, report))
     tests.sort(key=lambda t: t[0])
     return tests
@@ -92,14 +98,22 @@ def read_blood_history(path):
 def blood_trend(tests, born):
     points = []
     for day, report in tests:
+        age = age_on(born, day)
         try:
-            result = phenoage(age_on(born, day), report)
+            if len(report) == len(MARKERS):
+                result = phenoage(age, report)
+                exp = explain(result)
+                points.append(BloodPoint(day, age, result.phenoage,
+                                         {c.marker: c.years for c in exp.contributions},
+                                         result.warnings))
+            else:
+                r = phenoage_range(age, report)
+                parts = {m: marker_years(m, v, REFERENCE_PROFILE[m])
+                         for m, v in r.known_values.items()}
+                points.append(BloodPoint(day, age, r.estimate, parts, r.warnings,
+                                         r.low, r.high, r.missing))
         except ValueError as exc:
             raise ValueError("Test on %s: %s" % (day, exc))
-        exp = explain(result)
-        points.append(BloodPoint(day, result.chronological_age, result.phenoage,
-                                 {c.marker: c.years for c in exp.contributions},
-                                 result.warnings))
     return points
 
 
@@ -130,4 +144,4 @@ def change_since_previous(points: List[BloodPoint]) -> Optional[Dict[str, float]
     if len(points) < 2:
         return None
     a, b = points[-2].contributions, points[-1].contributions
-    return {m: b[m] - a[m] for m in b}
+    return {m: b[m] - a[m] for m in b if m in a}
