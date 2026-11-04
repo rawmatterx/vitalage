@@ -48,6 +48,33 @@ Difference        : -5.6 years
 10-yr mortality   : 1.4% (model estimate)
 ```
 
+### Which markers drive the result
+
+Add `--explain` to see how many years each marker adds or removes compared
+with a typical healthy adult of the same age:
+
+```
+Why (vs a typical healthy adult of the same age):
+  Same age, reference values : 35.3
+  mcv                   88 fL         ref 90       -0.6 yrs
+  glucose               95 mg/dL      ref 90.08    +0.6 yrs
+  albumin              4.3 g/dL       ref 4.4      +0.4 yrs
+  rdw                 13.1 %          ref 13       +0.4 yrs
+  ...
+  Total                                                   +1.0 yrs
+```
+
+This split is exact, not an approximation. The log-log step in PhenoAge
+undoes its Gompertz exponential, so PhenoAge is a straight line in the
+weighted marker sum: each marker adds `coefficient × (value − reference) / 0.0902`
+years, and the parts add up to the total. The reference values
+(`phenoage/explain.py`) are typical healthy adult values, a chosen yardstick
+rather than population medians; changing them moves years between
+"baseline" and "markers" but never changes your PhenoAge.
+
+Rough sensitivities: RDW +1 % point ≈ +3.7 years, doubling CRP ≈ +0.7 years,
+fasting glucose +18 mg/dL ≈ +2.2 years, albumin +0.1 g/dL ≈ −0.4 years.
+
 From Python:
 
 ```python
@@ -55,6 +82,11 @@ from phenoage import phenoage
 
 result = phenoage(42, {"albumin": (4.3, "g/dL"), "crp": (1.2, "mg/L"), ...})
 print(result.phenoage, result.acceleration, result.warnings)
+
+from phenoage.explain import explain
+
+for c in explain(result).contributions:
+    print(c.marker, round(c.years, 1))
 ```
 
 ## Tests
@@ -68,8 +100,8 @@ BioAge R package's PhenoAge formula, and check every unit conversion.
 
 ## Roadmap
 
-1. **Core PhenoAge with Indian units and tests** (this release)
-2. Per-marker explanation in years, against a fixed reference profile
+1. **Core PhenoAge with Indian units and tests** (done)
+2. **Per-marker explanation in years** (done, `--explain`)
 3. Band "fitness age" from resting HR, steps, sleep and VO₂max, using
    published mortality hazard ratios (labelled as a literature-based score)
 4. Dashboard with trends over time

@@ -108,6 +108,9 @@ class CliTests(unittest.TestCase):
     def test_cli_runs(self):
         self.assertEqual(main(self.args()), 0)
 
+    def test_cli_explain_runs(self):
+        self.assertEqual(main(self.args() + ["--explain"]), 0)
+
     def test_cli_rejects_bad_unit(self):
         self.assertEqual(main(self.args(albumin=(4.3, "g/L"))), 2)
 

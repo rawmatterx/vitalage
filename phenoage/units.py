@@ -69,26 +69,31 @@ def accepted_units(marker):
     return sorted(_FACTORS[marker])
 
 
+def factor(marker, unit):
+    """Multiplier from `unit` to the canonical unit for `marker`."""
+    if marker not in _FACTORS:
+        raise ValueError("Unknown marker '%s'. Expected one of: %s"
+                         % (marker, ", ".join(sorted(_FACTORS))))
+    key = _normalise_unit(unit)
+    if key not in _FACTORS[marker]:
+        raise ValueError("Unit '%s' not supported for %s. Use one of: %s"
+                         % (unit, marker, ", ".join(accepted_units(marker))))
+    return _FACTORS[marker][key]
+
+
 def to_canonical(marker, value, unit):
     """Convert one lab value to the formula's unit and sanity-check it.
 
     Raises ValueError for an unknown marker or unit, a non-positive value,
     or a converted value outside the plausible range.
     """
-    if marker not in _FACTORS:
-        raise ValueError("Unknown marker '%s'. Expected one of: %s"
-                         % (marker, ", ".join(sorted(_FACTORS))))
-    factors = _FACTORS[marker]
-    key = _normalise_unit(unit)
-    if key not in factors:
-        raise ValueError("Unit '%s' not supported for %s. Use one of: %s"
-                         % (unit, marker, ", ".join(accepted_units(marker))))
+    multiplier = factor(marker, unit)
     if value <= 0:
         raise ValueError("%s must be greater than 0 (got %s). For CRP reported "
                          "as below the detection limit, enter the limit itself, "
                          "e.g. '<0.5 mg/L' -> 0.5 mg/L." % (marker, value))
 
-    converted = value * factors[key]
+    converted = value * multiplier
     low, high = PLAUSIBLE_RANGES[marker]
     if not low <= converted <= high:
         raise ValueError(

@@ -7,7 +7,8 @@ import argparse
 import sys
 
 from .core import MARKERS, phenoage
-from .units import accepted_units
+from .explain import explain
+from .units import accepted_units, factor
 
 EXAMPLE = (
     "example:\n"
@@ -31,7 +32,23 @@ def build_parser():
                             metavar=("VALUE", "UNIT"),
                             # argparse treats % as a format character
                             help="units: " + ", ".join(accepted_units(marker)).replace("%", "%%"))
+    parser.add_argument("--explain", action="store_true",
+                        help="show how many years each marker adds or removes")
     return parser
+
+
+def print_explanation(result, report):
+    exp = explain(result)
+    print("\nWhy (vs a typical healthy adult of the same age):")
+    print("  Same age, reference values : %.1f" % exp.baseline_phenoage)
+    for c in exp.contributions:
+        unit = report[c.marker][1]
+        ref = c.reference / factor(c.marker, unit)
+        years = round(c.years, 1) + 0.0  # avoid printing -0.0
+        print("  %-15s %8g %-10s ref %-7g %+5.1f yrs"
+              % (c.marker, report[c.marker][0], unit, round(ref, 2), years))
+    print("  %-15s %38s %+5.1f yrs"
+          % ("Total", "", sum(c.years for c in exp.contributions)))
 
 
 def main(argv=None):
@@ -58,6 +75,8 @@ def main(argv=None):
     print("10-yr mortality   : %.1f%% (model estimate)" % (100 * result.mortality_10yr))
     for warning in result.warnings:
         print("warning: " + warning)
+    if args.explain:
+        print_explanation(result, report)
     print("\nNot a diagnostic tool. Trained on US data; not validated for Indian populations.")
     return 0
 
