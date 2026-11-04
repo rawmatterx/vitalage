@@ -100,6 +100,21 @@ table.report td:last-child, table.report th:last-child { padding-right: 0; }
 .cref { font: 400 12px/1.3 var(--font-data); color: var(--muted); white-space: nowrap; }
 .err { display: block; color: var(--bad); font-size: 12px; margin-top: 4px; }
 
+.pickers { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.picker {
+  position: relative; display: flex; flex-direction: column; gap: 2px; cursor: pointer;
+  border: 1px dashed var(--line); border-radius: 8px; padding: 12px 14px; background: var(--bg);
+}
+.picker:hover, .picker:focus-within, .import.dragging .picker { border-color: var(--accent); }
+.picker input { position: absolute; opacity: 0; inset: 0; width: 100%; cursor: pointer; }
+.picker:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pk-title { font-weight: 600; }
+.pk-sub { font-size: 12px; color: var(--muted); }
+.import-result { margin-top: 12px; border-radius: 6px; background: var(--note-bg); color: var(--note-ink); padding: 10px 12px; font-size: 13px; }
+.import-result p { margin: 0; font-weight: 600; }
+.import-result ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 2px; }
+.import-result.error { background: var(--bg); color: var(--bad); border: 1px solid var(--bad); }
+input.imported, select.imported { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 .band { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
 .hint { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
 
@@ -179,6 +194,29 @@ footer { margin-top: 20px; font-size: 13px; color: var(--muted); max-width: 75ch
 
   <form class="grid" id="form" autocomplete="off" novalidate>
     <div class="stack">
+      <section class="panel import" aria-labelledby="h-import" id="import-panel">
+        <div class="row-head">
+          <h2 id="h-import">Import from a file <span class="opt">(optional)</span></h2>
+        </div>
+        <div class="pickers">
+          <label class="picker" for="file-blood">
+            <input id="file-blood" type="file" accept=".pdf,.csv,.txt,application/pdf,text/csv">
+            <span class="pk-title">Blood report</span>
+            <span class="pk-sub">Lab PDF or CSV</span>
+          </label>
+          <label class="picker" for="file-band">
+            <input id="file-band" type="file" accept=".csv,.txt,text/csv">
+            <span class="pk-title">Band data</span>
+            <span class="pk-sub">Daily CSV export</span>
+          </label>
+        </div>
+        <p class="hint">Or drop a file here. Files are read in your browser and never uploaded. PDFs need to contain text; a scanned photo of a report cannot be read, so type those values in.</p>
+        <div id="import-result" class="import-result" hidden>
+          <p id="import-summary"></p>
+          <ul id="import-list"></ul>
+        </div>
+      </section>
+
       <section class="panel" aria-labelledby="h-you">
         <div class="row-head">
           <h2 id="h-you">You</h2>
@@ -429,8 +467,233 @@ var VA = (function () {
     return { fitnessAge: age + capped, parts: parts, uncapped: total, warnings: warnings };
   }
 
+  // ---- Import: text from a lab report (PDF or CSV) and band CSVs ----
+
+  // Unit choices offered on the form; the first is the usual one on Indian reports.
+  var UNIT_OPTIONS = {
+    albumin: ["g/dL", "g/L"], creatinine: ["mg/dL", "µmol/L"], glucose: ["mg/dL", "mmol/L"],
+    crp: ["mg/L", "mg/dL"], lymphocyte_pct: ["%"], mcv: ["fL"], rdw: ["%"], alp: ["U/L", "IU/L"],
+    wbc: ["cells/cumm", "10^3/µL", "10^9/L"]
+  };
+  // [marker, names on reports, lines to skip]
+  var REPORT_NAMES = [
+    ["albumin", /\balbumin\b/i, /globulin|ratio|urine|micro/i],
+    ["creatinine", /\bcreatinine\b/i, /urine|clearance|ratio|egfr|kinase|\bcpk\b|\bck\b/i],
+    ["glucose", /\b(glucose|blood sugar|fbs|fbg|fpg)\b/i, /post|\bpp\b|ppbs|random|\brbs\b|urine|hba1c|mean|estimated|\beag\b/i],
+    ["crp", /\b(hs[\s-]*crp|c[\s-]*reactive\s+protein|crp)\b/i, null],
+    ["lymphocyte_pct", /\blymphocytes?\b/i, /absolute|\babs\b|count|atypical/i],
+    ["mcv", /\b(mcv|mean\s+corpuscular\s+volume|mean\s+cell\s+volume)\b/i, null],
+    ["rdw", /\b(rdw|red\s+cell\s+distribution\s+width)\b/i, /\bsd\b/i],
+    ["alp", /\b(alkaline\s+phosphatase|alk\.?\s*phos\w*|alp)\b/i, /bone|isoenzyme/i],
+    ["wbc", /\b(total\s+leu[ck]ocyte\s+count|tlc|total\s+wbc|wbc|white\s+blood\s+cells?|total\s+count|leu[ck]ocytes?)\b/i, /urine|differential|\bdlc\b|absolute/i]
+  ];
+  var UNIT_PATTERNS = [
+    [/\bmg\s*\/\s*dl\b/i, "mg/dL"], [/\bg\s*\/\s*dl\b/i, "g/dL"], [/\bmg\s*\/\s*l\b/i, "mg/L"],
+    [/\bg\s*\/\s*l\b/i, "g/L"], [/(µ|μ|\bu)mol\s*\/\s*l\b/i, "µmol/L"], [/\bmmol\s*\/\s*l\b/i, "mmol/L"],
+    [/\bf\s*l\b/i, "fL"], [/\biu\s*\/\s*l\b/i, "IU/L"], [/\bu\s*\/\s*l\b/i, "U/L"],
+    [/(10\s*\^?\s*3|10³|thou)\s*\/\s*(µ|μ|u|mc)l/i, "10^3/µL"], [/(10\s*\^?\s*9|10⁹)\s*\/\s*l\b/i, "10^9/L"],
+    [/\/\s*(cumm|cu\.?\s*mm|mm3|mm³|µl|μl|ul)\b/i, "cells/cumm"], [/%/, "%"]
+  ];
+  var NUMBER = /(^|[^\d.])([<>]\s*)?(\d{1,3}(?:,\d{2,3})+(?:\.\d+)?|\d+(?:\.\d+)?)/;
+
+  function plausibleUnits(marker, value) {
+    return UNIT_OPTIONS[marker].filter(function (u) {
+      try { toCanonical(marker, value, u); return true; } catch (e) { return false; }
+    });
+  }
+
+  // One line of a report, e.g. "Albumin  4.3  g/dL  3.5 - 5.2".
+  function parseLine(line) {
+    var hits = [];
+    REPORT_NAMES.forEach(function (spec) {
+      var m = spec[1].exec(line);
+      if (!m || (spec[2] && spec[2].test(line))) return;
+      var rest = line.slice(m.index + m[0].length);
+      var n = NUMBER.exec(rest);
+      if (!n) return;
+      var value = Number(n[3].replace(/,/g, ""));
+      var after = rest.slice(n.index + n[0].length);
+      var unit = null;
+      for (var i = 0; i < UNIT_PATTERNS.length; i++) {
+        if (UNIT_PATTERNS[i][0].test(after)) { unit = UNIT_PATTERNS[i][1]; break; }
+      }
+      var guessed = false, ok = plausibleUnits(spec[0], value);
+      if (unit === null) {
+        // No unit on the line: take the first unit that gives a plausible value.
+        if (!ok.length) return;
+        unit = ok[0]; guessed = true;
+      } else if (ok.indexOf(unit) < 0) {
+        // A unit that does not fit this marker (e.g. an absolute count) or an
+        // implausible value: skip the line rather than guess.
+        return;
+      }
+      hits.push({ marker: spec[0], value: value, unit: unit, guessed: guessed,
+        belowLimit: !!(n[2] && n[2].trim() === "<"), fasting: /fasting|\bfbs\b|\bfbg\b|\bfpg\b/i.test(line),
+        line: line.trim() });
+    });
+    // A line names one test; if several matched (e.g. "WBC" inside a heading), keep the earliest name.
+    return hits.length ? hits.sort(function (a, b) {
+      return line.search(nameRe(a.marker)) - line.search(nameRe(b.marker));
+    })[0] : null;
+  }
+  function nameRe(marker) {
+    for (var i = 0; i < REPORT_NAMES.length; i++) if (REPORT_NAMES[i][0] === marker) return REPORT_NAMES[i][1];
+  }
+
+  // Whole report text -> {found: {marker: hit}, missing: [markers]}
+  function parseReportText(text) {
+    var found = {};
+    String(text).split(/\r?\n/).forEach(function (line) {
+      var hit = parseLine(line);
+      if (!hit) return;
+      var prev = found[hit.marker];
+      // First result wins, except a fasting glucose replaces a non-fasting one.
+      if (!prev || (hit.marker === "glucose" && hit.fasting && !prev.fasting)) found[hit.marker] = hit;
+    });
+    return { found: found, missing: MARKERS.filter(function (m) { return !(m in found); }),
+      patient: parsePatient(String(text)) };
+  }
+
+  // "Age/Sex: 42 Y / M", "Age: 42 Years  Sex: Female", "42Y/F"
+  function parsePatient(text) {
+    var out = {}, m;
+    if ((m = /\bage\s*(?:\/\s*(?:sex|gender))?\s*[:\-]?\s*(\d{1,3})(?:\.\d+)?\s*(?:y\b|yr|yrs|years?)/i.exec(text)) ||
+        (m = /\b(\d{1,3})\s*(?:y|yrs?|years?)\s*\/\s*[mf]\b/i.exec(text))) {
+      var a = Number(m[1]);
+      if (a >= 18 && a <= 100) out.age = a;
+    }
+    if ((m = /\b(?:sex|gender)\s*[:\-]\s*(male|female|m|f)\b/i.exec(text)) ||
+        (m = /\d\s*(?:y|yrs?|years?)\s*\/\s*(male|female|m|f)\b/i.exec(text))) {
+      out.sex = /^m/i.test(m[1]) ? "male" : "female";
+    }
+    return out;
+  }
+
+  function parseCsv(text) {
+    var rows = [], row = [], cell = "", q = false, s = String(text).replace(/^﻿/, "");
+    var delim = (s.split("\n")[0].indexOf(",") < 0 && s.indexOf("\t") >= 0) ? "\t" : ",";
+    for (var i = 0; i < s.length; i++) {
+      var ch = s[i];
+      if (q) {
+        if (ch === '"' && s[i + 1] === '"') { cell += '"'; i++; }
+        else if (ch === '"') q = false;
+        else cell += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === delim) { row.push(cell); cell = ""; }
+      else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && s[i + 1] === "\n") i++;
+        row.push(cell); cell = "";
+        if (row.some(function (c) { return c.trim() !== ""; })) rows.push(row);
+        row = [];
+      } else cell += ch;
+    }
+    row.push(cell);
+    if (row.some(function (c) { return c.trim() !== ""; })) rows.push(row);
+    return rows;
+  }
+
+  function parseDate(text) {
+    var t = String(text).trim(), m;
+    if ((m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(t))) return Date.UTC(+m[1], m[2] - 1, +m[3]);
+    if ((m = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/.exec(t))) return Date.UTC(+m[3], m[2] - 1, +m[1]);  // day first
+    return null;
+  }
+  function isoDate(ms) { return new Date(ms).toISOString().slice(0, 10); }
+
+  // Blood CSV: the dashboard's history layout ("albumin (g/dL)" columns, newest
+  // row used) or any list of test, value, unit rows.
+  function bloodFromCsv(text) {
+    var rows = parseCsv(text);
+    if (!rows.length) throw new Error("The file is empty.");
+    var head = rows[0].map(function (h) { return h.trim(); });
+    var dateCol = head.findIndex(function (h) { return /^date$/i.test(h); });
+    var cols = {};
+    head.forEach(function (h, i) {
+      var m = /^([a-z_]+)\s*\(([^)]+)\)$/i.exec(h);
+      if (m && MARKERS.indexOf(m[1].toLowerCase()) >= 0) cols[m[1].toLowerCase()] = { i: i, unit: m[2].trim() };
+    });
+    if (dateCol >= 0 && Object.keys(cols).length) {
+      var best = null;
+      rows.slice(1).forEach(function (r) {
+        var d = parseDate(r[dateCol] || "");
+        if (d !== null && (best === null || d > best.d)) best = { d: d, r: r };
+      });
+      if (!best) throw new Error("No dated rows found.");
+      var found = {};
+      Object.keys(cols).forEach(function (mk) {
+        var t = (best.r[cols[mk].i] || "").trim();
+        if (!t) return;
+        var unit = cols[mk].unit, value = Number(t.replace(/,/g, ""));
+        var options = UNIT_OPTIONS[mk].map(normalise);
+        var k = options.indexOf(normalise(unit));
+        found[mk] = { marker: mk, value: value, unit: k >= 0 ? UNIT_OPTIONS[mk][k] : unit, guessed: false,
+          line: head[cols[mk].i] + " = " + t };
+      });
+      return { found: found, missing: MARKERS.filter(function (m) { return !(m in found); }), date: isoDate(best.d) };
+    }
+    return parseReportText(rows.map(function (r) { return r.join("  "); }).join("\n"));
+  }
+
+  // Band CSV: one row per day. Same rules as the Python band tool: the 30 days
+  // up to the latest date, medians, days under 500 steps dropped as not worn,
+  // a metric needs 14 valid days (VO2max needs 1).
+  var BAND_RULES = {
+    resting_hr: [30, 120, 14], steps: [500, 60000, 14], sleep_hours: [2, 14, 14], vo2max: [10, 90, 1]
+  };
+  function bandColumn(h) {
+    var s = h.trim().toLowerCase();
+    if (/^(date|day|start|start date|timestamp|time)\b/.test(s)) return "date";
+    if (/resting/.test(s) || /^rhr\b/.test(s)) return "resting_hr";
+    if (/step/.test(s)) return "steps";
+    if (/sleep/.test(s)) return /min/.test(s) ? "sleep_minutes" : "sleep_hours";
+    if (/vo2|vo₂|cardio fitness/.test(s)) return "vo2max";
+    return null;
+  }
+  function median(xs) {
+    var a = xs.slice().sort(function (p, q) { return p - q; }), n = a.length;
+    return n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2;
+  }
+  function bandFromCsv(text) {
+    var rows = parseCsv(text);
+    if (rows.length < 2) throw new Error("The file has no data rows.");
+    var map = rows[0].map(bandColumn);
+    if (map.indexOf("date") < 0) throw new Error("No date column found. Expected a header like date,resting_hr,steps,sleep_hours,vo2max.");
+    if (!map.some(function (c) { return c && c !== "date"; })) throw new Error("No band columns found (resting heart rate, steps, sleep or VO₂max).");
+    var days = [];
+    rows.slice(1).forEach(function (r) {
+      var d = parseDate(r[map.indexOf("date")] || "");
+      if (d === null) return;
+      var v = {};
+      map.forEach(function (c, i) {
+        if (!c || c === "date") return;
+        var t = (r[i] || "").trim().replace(/,/g, "");
+        if (t === "" || !isFinite(Number(t))) return;
+        if (c === "sleep_minutes") v.sleep_hours = Number(t) / 60;
+        else v[c] = Number(t);
+      });
+      days.push({ d: d, v: v });
+    });
+    if (!days.length) throw new Error("No rows with a readable date.");
+    var end = Math.max.apply(null, days.map(function (x) { return x.d; }));
+    var start = end - 29 * 864e5;
+    var recent = days.filter(function (x) { return x.d >= start && x.d <= end; });
+    var values = {}, used = {}, notes = [];
+    Object.keys(BAND_RULES).forEach(function (k) {
+      var r = BAND_RULES[k];
+      var present = recent.filter(function (x) { return x.v[k] != null; }).map(function (x) { return x.v[k]; });
+      var good = present.filter(function (x) { return x >= r[0] && x <= r[1]; });
+      used[k] = good.length;
+      if (present.length > good.length) notes.push(k + ": ignored " + (present.length - good.length) + " day(s) outside " + r[0] + "–" + r[1] + ".");
+      if (good.length >= r[2]) values[k] = median(good);
+      else if (good.length) notes.push(k + ": only " + good.length + " valid day(s) in the last 30; need " + r[2] + ".");
+    });
+    return { values: values, days: used, start: isoDate(start), end: isoDate(end), notes: notes };
+  }
+
   return {
     MARKERS: MARKERS, REFERENCE: REFERENCE, NORMAL: NORMAL, CANONICAL_UNITS: CANONICAL_UNITS,
+    UNIT_OPTIONS: UNIT_OPTIONS, parseReportText: parseReportText, parseCsv: parseCsv,
+    bloodFromCsv: bloodFromCsv, bandFromCsv: bandFromCsv,
     factor: factor, toCanonical: toCanonical, phenoage: phenoage, markerYears: markerYears,
     range: range, fitness: fitness, vo2Reference: vo2Reference,
     restingHrYears: restingHrYears, stepsYears: stepsYears, vo2Years: vo2Years, sleepYears: sleepYears
@@ -442,16 +705,17 @@ if (typeof module !== "undefined") module.exports = VA;
 <script>
 (function () {
   var MARKER_INFO = {
-    albumin: { name: "Albumin", test: "LFT", units: ["g/dL", "g/L"] },
-    creatinine: { name: "Creatinine", test: "KFT", units: ["mg/dL", "µmol/L"] },
-    glucose: { name: "Glucose, fasting", test: "Blood sugar", units: ["mg/dL", "mmol/L"] },
-    crp: { name: "C-reactive protein", test: "hs-CRP", units: ["mg/L", "mg/dL"] },
-    lymphocyte_pct: { name: "Lymphocytes", test: "CBC differential", units: ["%"] },
-    mcv: { name: "MCV", test: "CBC", units: ["fL"] },
-    rdw: { name: "RDW-CV", test: "CBC", units: ["%"] },
-    alp: { name: "Alkaline phosphatase", test: "LFT", units: ["U/L", "IU/L"] },
-    wbc: { name: "WBC count", test: "CBC", units: ["cells/cumm", "10^3/µL", "10^9/L"] }
+    albumin: { name: "Albumin", test: "LFT" },
+    creatinine: { name: "Creatinine", test: "KFT" },
+    glucose: { name: "Glucose, fasting", test: "Blood sugar" },
+    crp: { name: "C-reactive protein", test: "hs-CRP" },
+    lymphocyte_pct: { name: "Lymphocytes", test: "CBC differential" },
+    mcv: { name: "MCV", test: "CBC" },
+    rdw: { name: "RDW-CV", test: "CBC" },
+    alp: { name: "Alkaline phosphatase", test: "LFT" },
+    wbc: { name: "WBC count", test: "CBC" }
   };
+  VA.MARKERS.forEach(function (m) { MARKER_INFO[m].units = VA.UNIT_OPTIONS[m]; });
   var SHORT = { albumin: "Albumin", creatinine: "Creatinine", glucose: "Glucose", crp: "CRP",
     lymphocyte_pct: "Lymphocytes", mcv: "MCV", rdw: "RDW", alp: "ALP", wbc: "WBC",
     resting_hr: "Resting HR", steps: "Steps", sleep_hours: "Sleep", vo2max: "VO₂max" };
@@ -678,7 +942,187 @@ if (typeof module !== "undefined") module.exports = VA;
     update();
   }
 
+  // ---- File import ----
+  var PDF_BASE = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  var pdfReady = null;
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = src; s.onload = resolve;
+      s.onerror = function () { reject(new Error("Could not load the PDF reader. Check your internet connection, or import a CSV instead.")); };
+      document.head.appendChild(s);
+    });
+  }
+  function pdfLib() {
+    // The worker script runs on the page itself (a "fake worker"), because the
+    // viewer does not allow cross-site worker scripts.
+    if (!pdfReady) pdfReady = loadScript(PDF_BASE + "pdf.min.js")
+      .then(function () { return loadScript(PDF_BASE + "pdf.worker.min.js"); })
+      .then(function () { return window.pdfjsLib; });
+    return pdfReady;
+  }
+  function pdfToText(buffer) {
+    return pdfLib().then(function (lib) {
+      return lib.getDocument({ data: new Uint8Array(buffer), isEvalSupported: false }).promise;
+    }).then(function (doc) {
+      var pages = [];
+      for (var i = 1; i <= doc.numPages; i++) pages.push(doc.getPage(i).then(function (p) { return p.getTextContent(); }));
+      return Promise.all(pages);
+    }).then(function (contents) {
+      // Rebuild lines: group text pieces that share a baseline, left to right.
+      var lines = [];
+      contents.forEach(function (c) {
+        var rows = [];
+        c.items.forEach(function (it) {
+          if (!it.str || !it.str.trim()) return;
+          var y = it.transform[5], x = it.transform[4];
+          var row = rows.find(function (r) { return Math.abs(r.y - y) < 3; });
+          if (!row) { row = { y: y, parts: [] }; rows.push(row); }
+          row.parts.push({ x: x, s: it.str });
+        });
+        rows.sort(function (a, b) { return b.y - a.y; });
+        rows.forEach(function (r) {
+          r.parts.sort(function (a, b) { return a.x - b.x; });
+          lines.push(r.parts.map(function (p) { return p.s; }).join("  "));
+        });
+      });
+      return lines.join("\n");
+    });
+  }
+
+  function clearImported(ids) {
+    ids.forEach(function (id) { $(id).classList.remove("imported"); });
+  }
+  var BLOOD_FIELDS = ["age", "sex"].concat(VA.MARKERS.map(function (m) { return "v-" + m; }),
+    VA.MARKERS.map(function (m) { return "u-" + m; }));
+  var BAND_FIELDS = ["rhr", "steps", "sleep", "vo2"];
+  function showImport(title, items, isError) {
+    var box = $("import-result");
+    box.hidden = false;
+    box.classList.toggle("error", !!isError);
+    $("import-summary").textContent = title;
+    var ul = $("import-list"); ul.textContent = "";
+    (items || []).forEach(function (t) { make("li", null, t, ul); });
+  }
+  function fmtNum(x) { return Math.round(x * 10) / 10; }
+
+  function applyBlood(result, source) {
+    clearImported(BLOOD_FIELDS);
+    var keys = Object.keys(result.found);
+    if (!keys.length) {
+      showImport("No blood markers found in " + source + ".", [
+        "Check that the file is a lab report with text in it, or type the values in.",
+        "For a CSV, use columns like \"albumin (g/dL)\" or rows of test, value, unit."], true);
+      return;
+    }
+    VA.MARKERS.forEach(function (m) {
+      var hit = result.found[m];
+      if (!hit) { $("v-" + m).value = ""; return; }
+      $("v-" + m).value = hit.value;
+      $("u-" + m).value = hit.unit;
+      $("v-" + m).classList.add("imported");
+      if (hit.guessed) $("u-" + m).classList.add("imported");
+    });
+    var items = keys.map(function (m) {
+      var hit = result.found[m];
+      return MARKER_INFO[m].name + ": " + hit.value + " " + hit.unit +
+        (hit.guessed ? " (unit not on the line; guessed, please check)" : "") +
+        (hit.belowLimit ? " (report says below this limit)" : "");
+    });
+    if (result.missing.length) items.push("Not found: " + result.missing.map(function (m) { return MARKER_INFO[m].name; }).join(", ") +
+      ". Type these in if your report has them.");
+    var pt = result.patient || {};
+    if (pt.age && !$("age").value) {
+      $("age").value = pt.age; $("age").classList.add("imported");
+      items.push("Age " + pt.age + " read from the report (age on the test date).");
+    }
+    if (pt.sex && !$("sex").value) {
+      $("sex").value = pt.sex; $("sex").classList.add("imported");
+      items.push("Sex read from the report: " + pt.sex + ".");
+    }
+    showImport("Imported " + keys.length + " of 9 markers from " + source + (result.date ? " (test of " + result.date + ")" : "") +
+      ". Check each highlighted value against your report.", items);
+    $("blood-panel").classList.remove("is-example");
+    update();
+  }
+
+  function applyBand(result, source) {
+    clearImported(BAND_FIELDS);
+    var ids = { resting_hr: "rhr", steps: "steps", sleep_hours: "sleep", vo2max: "vo2" };
+    var names = { resting_hr: "Resting HR", steps: "Steps", sleep_hours: "Sleep", vo2max: "VO₂max" };
+    var items = [];
+    Object.keys(ids).forEach(function (k) {
+      var v = result.values[k];
+      if (v == null) { $(ids[k]).value = ""; return; }
+      $(ids[k]).value = k === "steps" ? Math.round(v) : fmtNum(v);
+      $(ids[k]).classList.add("imported");
+      items.push(names[k] + ": " + (k === "steps" ? Math.round(v) : fmtNum(v)) + " (median of " + result.days[k] + " days)");
+    });
+    if (!items.length) {
+      showImport("No usable band values in " + source + ".", result.notes.concat(["Each metric needs at least 14 days in the last 30 (VO₂max needs 1)."]), true);
+      return;
+    }
+    showImport("Imported band data from " + source + ", " + result.start + " to " + result.end + ".", items.concat(result.notes));
+    update();
+  }
+
+  function readFile(file, kind) {
+    var name = file.name || "the file";
+    var isPdf = /\.pdf$/i.test(name) || file.type === "application/pdf";
+    if (isPdf && kind === "band") { showImport("Band data must be a CSV file.", [], true); return; }
+    var reader = new FileReader();
+    reader.onerror = function () { showImport("Could not read " + name + ".", [], true); };
+    reader.onload = function () {
+      try {
+        if (isPdf) {
+          showImport("Reading " + name + "…", []);
+          pdfToText(reader.result).then(function (text) {
+            if (!text.trim()) {
+              showImport("This PDF has no readable text.", ["It is probably a scanned image. Type the values in from the report instead."], true);
+              return;
+            }
+            applyBlood(VA.parseReportText(text), name);
+          }).catch(function (e) { showImport("Could not read " + name + ".", [e.message], true); });
+          return;
+        }
+        var text = String(reader.result);
+        if (!kind) {   // dropped file: decide from the header
+          var first = (text.split(/\r?\n/)[0] || "").toLowerCase();
+          kind = /step|sleep|resting|vo2/.test(first) ? "band" : "blood";
+        }
+        if (kind === "band") applyBand(VA.bandFromCsv(text), name);
+        else applyBlood(VA.bloodFromCsv(text), name);
+      } catch (e) {
+        showImport("Could not import " + name + ".", [e.message], true);
+      }
+    };
+    if (isPdf) reader.readAsArrayBuffer(file); else reader.readAsText(file);
+  }
+
+  $("file-blood").addEventListener("change", function (e) {
+    if (e.target.files[0]) readFile(e.target.files[0], "blood");
+    e.target.value = "";
+  });
+  $("file-band").addEventListener("change", function (e) {
+    if (e.target.files[0]) readFile(e.target.files[0], "band");
+    e.target.value = "";
+  });
+  var panel = $("import-panel");
+  ["dragenter", "dragover"].forEach(function (t) {
+    panel.addEventListener(t, function (e) { e.preventDefault(); panel.classList.add("dragging"); });
+  });
+  ["dragleave", "drop"].forEach(function (t) {
+    panel.addEventListener(t, function () { panel.classList.remove("dragging"); });
+  });
+  panel.addEventListener("drop", function (e) {
+    e.preventDefault();
+    var f = e.dataTransfer && e.dataTransfer.files[0];
+    if (f) readFile(f, null);
+  });
+
   $("form").addEventListener("input", function (e) {
+    if (e.target.type === "file") return;
+    e.target.classList.remove("imported");
     if (e.target.closest("#blood-panel") || e.target.id === "age") $("blood-panel").classList.remove("is-example");
     update();
   });

@@ -37,6 +37,9 @@ const out = cases.map(c => {
     return { fitnessAge: r.fitnessAge, parts: r.parts };
   }
   if (c.kind === "unit") return { value: VA.toCanonical(c.marker, c.value, c.unit) };
+  if (c.kind === "report") return VA.parseReportText(c.text);
+  if (c.kind === "bloodcsv") return VA.bloodFromCsv(c.text);
+  if (c.kind === "bandcsv") return VA.bandFromCsv(c.text);
 });
 process.stdout.write(JSON.stringify(out));
 """
@@ -55,7 +58,9 @@ def random_values(rng):
 
 
 @unittest.skipUnless(NODE, "node is not installed")
-class WebEngineMatchesPython(unittest.TestCase):
+class NodeEngineCase(unittest.TestCase):
+    """Loads the page's engine script into Node; holds no tests itself."""
+
     @classmethod
     def setUpClass(cls):
         with open(PAGE, encoding="utf-8") as f:
@@ -78,6 +83,8 @@ class WebEngineMatchesPython(unittest.TestCase):
                              capture_output=True, text=True, check=True)
         return json.loads(out.stdout)
 
+
+class WebEngineMatchesPython(NodeEngineCase):
     def test_full_phenoage_and_parts(self):
         rng = random.Random(1)
         cases = [{"kind": "full", "age": rng.uniform(20, 84), "values": random_values(rng)}
@@ -133,6 +140,91 @@ class WebEngineMatchesPython(unittest.TestCase):
         js = self.run_js([{"kind": "unit", "marker": m, "value": v, "unit": u} for m, v, u in cases])
         for (m, v, u), out in zip(cases, js):
             self.assertAlmostEqual(out["value"], to_canonical(m, v, u), places=12, msg=(m, u))
+
+
+EXAMPLES = os.path.join(os.path.dirname(__file__), "..", "examples")
+
+
+def read(name):
+    with open(os.path.join(EXAMPLES, name), encoding="utf-8") as f:
+        return f.read()
+
+
+class WebImport(NodeEngineCase):
+    def test_sample_lab_report(self):
+        import sys
+        sys.path.insert(0, EXAMPLES)
+        from make_sample_report import report_lines
+        out = self.run_js([{"kind": "report", "text": "\n".join(report_lines())}])[0]
+        got = {m: (h["value"], h["unit"]) for m, h in out["found"].items()}
+        self.assertEqual(got, {
+            "albumin": (4.3, "g/dL"), "creatinine": (0.9, "mg/dL"), "glucose": (95, "mg/dL"),
+            "crp": (1.2, "mg/L"), "lymphocyte_pct": (32, "%"), "mcv": (88, "fL"),
+            "rdw": (13.1, "%"), "alp": (78, "U/L"), "wbc": (6800, "cells/cumm")})
+        self.assertEqual(out["missing"], [])
+        self.assertEqual(out["patient"], {"age": 42, "sex": "male"})
+
+    def test_patient_formats(self):
+        cases = {"Age: 35 Years   Sex: Female": {"age": 35, "sex": "female"},
+                 "Name: X  51Y/M  Ref: Self": {"age": 51, "sex": "male"},
+                 "Patient age not given": {}}
+        outs = self.run_js([{"kind": "report", "text": t} for t in cases])
+        for (text, expected), out in zip(cases.items(), outs):
+            self.assertEqual(out["patient"], expected, msg=text)
+
+    def test_tricky_lines(self):
+        lines = [
+            "Glucose Random  140  mg/dL",            # skipped: not fasting
+            "FBS  92  mg/dL  70-110",
+            "S. Albumin  43  g/L",
+            "Albumin/Globulin Ratio  1.4",           # skipped
+            "CRP  <0.5  mg/L",
+            "Total WBC Count  7.2  x10^9/L",
+            "Lymphocytes  2.1  10^3/uL",             # skipped: absolute count
+            "Creatinine Kinase (CK)  120  U/L",       # skipped
+            "RDW-SD  42  fL",                         # skipped
+        ]
+        out = self.run_js([{"kind": "report", "text": "\n".join(lines)}])[0]
+        got = {m: (h["value"], h["unit"]) for m, h in out["found"].items()}
+        self.assertEqual(got, {"glucose": (92, "mg/dL"), "albumin": (43, "g/L"),
+                               "crp": (0.5, "mg/L"), "wbc": (7.2, "10^9/L")})
+        self.assertTrue(out["found"]["crp"]["belowLimit"])
+
+    def test_blood_history_csv_uses_newest_row(self):
+        out = self.run_js([{"kind": "bloodcsv", "text": read("blood_history.csv")}])[0]
+        self.assertEqual(out["date"], "2026-10-25")
+        self.assertEqual(out["found"]["albumin"]["value"], 4.4)
+        self.assertEqual(out["found"]["wbc"]["unit"], "cells/cumm")
+        self.assertEqual(out["missing"], [])
+
+    def test_simple_blood_csv(self):
+        text = "Test,Result,Unit\nAlbumin,4.1,g/dL\nhs-CRP,2.0,mg/L\nTLC,\"7,400\",/cumm\n"
+        out = self.run_js([{"kind": "bloodcsv", "text": text}])[0]
+        got = {m: (h["value"], h["unit"]) for m, h in out["found"].items()}
+        self.assertEqual(got, {"albumin": (4.1, "g/dL"), "crp": (2.0, "mg/L"),
+                               "wbc": (7400, "cells/cumm")})
+
+    def test_band_csv_matches_python(self):
+        from phenoage.band import read_rows, summarise
+        for name in ("band_sample.csv", "band_history.csv"):
+            js = self.run_js([{"kind": "bandcsv", "text": read(name)}])[0]
+            py = summarise(read_rows(os.path.join(EXAMPLES, name)))
+            self.assertEqual(js["end"], py.end.isoformat())
+            self.assertEqual(js["start"], py.start.isoformat())
+            for k, v in py.values.items():
+                if v is None:
+                    self.assertNotIn(k, js["values"], msg=(name, k))
+                else:
+                    self.assertAlmostEqual(js["values"][k], v, places=9, msg=(name, k))
+                self.assertEqual(js["days"][k], py.days[k], msg=(name, k))
+
+    def test_band_csv_other_headers(self):
+        lines = ["Date,Resting Heart Rate,Step Count,Sleep (minutes)"]
+        for d in range(1, 21):
+            lines.append("%02d/10/2026,60,\"9,000\",420" % d)     # day-first dates
+        out = self.run_js([{"kind": "bandcsv", "text": "\n".join(lines)}])[0]
+        self.assertEqual(out["values"], {"resting_hr": 60, "steps": 9000, "sleep_hours": 7})
+        self.assertEqual(out["end"], "2026-10-20")
 
 
 if __name__ == "__main__":
