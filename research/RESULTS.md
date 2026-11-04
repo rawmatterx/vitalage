@@ -270,3 +270,59 @@ Committed before any 2015-2018 file was downloaded. Code:
 - **Whatever the result, nothing changes in the package or the web page.**
   Even a success makes the refit a candidate to confirm in another cohort,
   such as LASI or UK Biobank.
+
+## 8. Confirmatory test result, NHANES 2015-2018
+
+Run once on the frozen models (SHA-256 `9a7020de89d5d60145a696789bab069d9e9b99476d2d2b0ab3bc6534919a8e1a`, commit f2d13d1).
+
+**Test set:** 9,284 adults aged 20-79 with all 9 markers and linked
+mortality, 209 deaths (146 in the 2015-16 cohort,
+63 in 2017-18). Median follow-up 36 months
+(maximum 61).
+
+| Model (frozen, fitted on 2003-06) | Harrell's C, all follow-up (95% CI) |
+|---|---|
+| Comparator: age + PhenoAge acceleration | 0.834 (0.802 to 0.864) |
+| PhenoAge itself (ranked as published) | 0.836 |
+| Refit: ridge Gompertz on age + 9 markers | 0.845 (0.813 to 0.874) |
+
+**Primary result: refit minus comparator = +0.0110 (paired bootstrap
+95% CI +0.0036 to +0.0190). The CI excludes zero, so the
+pre-registered test succeeds.**
+
+**Power.** The bootstrap SE of the difference is 0.0039, so with
+209 deaths the smallest difference detectable with 80% power is about
+0.011. The observed gain sits at that limit:
+the direction is confirmed, but its size is imprecise.
+
+**Calibration at 24 months** (predicted vs Kaplan-Meier observed).
+Both models predict more deaths than occurred: refit
+2.11% vs 1.51%,
+comparator 1.87% vs
+1.51%. A likely cause is that mortality
+fell between 2003-06 and 2015-18; the refit over-predicts more in the middle
+quintiles. A refit used for absolute risk would need recalibration; ranking
+(C) is unaffected.
+
+| Refit quintile | Predicted | Observed |
+|---|---|---|
+| 1 | 0.24% | 0.11% |
+| 2 | 0.55% | 0.29% |
+| 3 | 1.16% | 0.53% |
+| 4 | 2.33% | 1.23% |
+| 5 | 6.27% | 5.47% |
+
+| Comparator quintile | Predicted | Observed |
+|---|---|---|
+| 1 | 0.07% | 0.17% |
+| 2 | 0.22% | 0.23% |
+| 3 | 0.66% | 0.59% |
+| 4 | 1.80% | 1.44% |
+| 5 | 6.60% | 5.18% |
+
+**Status.** The marker refit is now a confirmed candidate in three NHANES
+periods (2003-06 locked test, 2011-14 locked test without CRP, and this
+pre-registered 2015-18 test). As pre-registered, nothing changes in the
+package or the web page. Next steps before any use: confirm in a different
+population (LASI for India, or UK Biobank), recalibrate the absolute risk,
+and convert the refit to an age in years with Levine's method.
