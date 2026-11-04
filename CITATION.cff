@@ -1,0 +1,63 @@
+cff-version: 1.2.0
+message: >-
+  If you use VitalAge, please cite the original Phenotypic Age papers listed
+  under references. VitalAge is an independent implementation, not affiliated
+  with their authors.
+title: "VitalAge: PhenoAge for Indian lab reports, plus band Fitness Age"
+type: software
+authors:
+  - name: "Arup Roy"
+repository-code: "https://github.com/rawmatterx/vitalage"
+references:
+  - type: article
+    title: "An epigenetic biomarker of aging for lifespan and healthspan"
+    authors:
+      - family-names: Levine
+        given-names: Morgan E.
+      - family-names: Lu
+        given-names: Ake T.
+      - family-names: Quach
+        given-names: Austin
+      - name: "et al."
+    journal: "Aging (Albany NY)"
+    year: 2018
+    volume: 10
+    issue: 4
+    start: 573
+    end: 591
+    doi: "10.18632/aging.101414"
+  - type: article
+    title: "A new aging measure captures morbidity and mortality risk across diverse subpopulations from NHANES IV: A cohort study"
+    authors:
+      - family-names: Liu
+        given-names: Zuyun
+      - family-names: Kuo
+        given-names: Pei-Lun
+      - family-names: Horvath
+        given-names: Steve
+      - family-names: Crimmins
+        given-names: Eileen
+      - family-names: Ferrucci
+        given-names: Luigi
+      - family-names: Levine
+        given-names: Morgan
+    journal: "PLoS Medicine"
+    year: 2018
+    volume: 15
+    issue: 12
+    start: e1002718
+    doi: "10.1371/journal.pmed.1002718"
+  - type: article
+    title: "A toolkit for quantification of biological age from blood chemistry and organ function test data: BioAge"
+    authors:
+      - family-names: Kwon
+        given-names: Dayoon
+      - family-names: Belsky
+        given-names: Daniel W.
+    journal: "GeroScience"
+    year: 2021
+    volume: 43
+    issue: 6
+    start: 2795
+    end: 2808
+    doi: "10.1007/s11357-021-00480-5"

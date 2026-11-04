@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VitalAge Dashboard</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --younger: #2a78d6;
+  --older: #e34948;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --younger: #3987e5;
+    --older: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --younger: #3987e5;
+  --older: #e66767;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--page); color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 24px; margin: 0 0 4px; }
+h2 { font-size: 17px; margin: 0 0 4px; }
+.sub { color: var(--ink-2); margin: 0 0 20px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.tile .label { color: var(--ink-2); font-size: 13px; }
+.tile .value { font-size: 32px; font-weight: 600; line-height: 1.2; }
+.tile .delta { font-size: 14px; color: var(--ink-2); }
+.tile .key { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 6px; }
+section.card { margin-bottom: 16px; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--ink-2); margin: 8px 0; }
+.legend span::before { content: ""; display: inline-block; width: 16px; height: 2px; vertical-align: middle; margin-right: 6px; background: var(--c); }
+.legend .bar::before { width: 10px; height: 10px; border-radius: 2px; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.tick { fill: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.dlabel { fill: var(--ink-2); font-size: 12px; }
+.tip {
+  position: absolute; pointer-events: none; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12); white-space: nowrap; display: none; z-index: 2;
+}
+.tip .row { display: flex; align-items: center; gap: 8px; }
+.tip .row i { width: 12px; height: 2px; background: var(--c); display: inline-block; }
+.tip strong { font-variant-numeric: tabular-nums; }
+.tip .when { color: var(--ink-2); margin-bottom: 4px; }
+.note { color: var(--ink-2); font-size: 13px; margin: 8px 0 0; }
+.empty { color: var(--muted); padding: 24px 0; }
+details { margin-top: 12px; }
+summary { cursor: pointer; color: var(--ink-2); font-size: 14px; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; font-size: 13px; margin-top: 8px; font-variant-numeric: tabular-nums; }
+th, td { padding: 4px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--ink-2); font-weight: 600; }
+footer { color: var(--muted); font-size: 13px; }
+.refs ol { font-size: 13px; color: var(--ink-2); padding-left: 20px; margin: 8px 0; }
+.refs li { margin-bottom: 4px; }
+a { color: var(--series-1); }
+</style>
+</head>
+<body>
+<main>
+  <h1>VitalAge</h1>
+  <p class="sub" id="sub"></p>
+  <div class="tiles" id="tiles"></div>
+
+  <section class="card">
+    <h2>Years older or younger than your calendar age</h2>
+    <div class="legend" id="trend-legend"></div>
+    <div class="chart" id="trend"></div>
+    <p class="note">Below zero means your body measures younger than your age. Single blood tests are
+      noisy (a cold can raise CRP and WBC), so look at the direction over several tests.</p>
+    <details><summary>Show as a table</summary><div class="tablewrap" id="trend-table"></div></details>
+  </section>
+
+  <section class="card">
+    <h2 id="parts-title">What drives your latest blood age</h2>
+    <p class="sub" id="parts-sub" style="margin:0"></p>
+    <div class="legend">
+      <span class="bar" style="--c: var(--older)">Adds years</span>
+      <span class="bar" style="--c: var(--younger)">Removes years</span>
+    </div>
+    <div class="chart" id="parts"></div>
+    <details><summary>Show as a table</summary><div class="tablewrap" id="parts-table"></div></details>
+  </section>
+
+  <section class="card">
+    <h2>What drives your latest Fitness Age</h2>
+    <p class="sub" style="margin:0">Compared with the reference values in the README</p>
+    <div class="chart" id="fit-parts"></div>
+  </section>
+
+  <section class="card refs">
+    <h2>Scientific basis</h2>
+    <p class="note" style="margin-top:0">Blood age is <strong>Phenotypic Age (PhenoAge)</strong>, developed by
+      Levine et al. (2018) on US NHANES III data and validated in NHANES IV by Liu et al. (2018). The published
+      coefficients are used unchanged. It has not been validated for Indian populations.</p>
+    <ol id="refs-pheno"></ol>
+    <p class="note">Fitness Age combines effects from separate meta-analyses; it is a literature-based score,
+      not a validated clock.</p>
+    <ol id="refs-fit"></ol>
+  </section>
+
+  <footer>VitalAge is an independent implementation, not affiliated with or endorsed by the authors cited.
+    Not a diagnostic tool.</footer>
+</main>
+
+<script id="data" type="application/json">{"born": "1984-05-10", "sex": "male", "today": "2026-11-04", "labels": {"albumin": "Albumin", "creatinine": "Creatinine", "glucose": "Glucose", "crp": "CRP", "lymphocyte_pct": "Lymphocyte %", "mcv": "MCV", "rdw": "RDW", "alp": "ALP", "wbc": "WBC", "resting_hr": "Resting HR", "steps": "Steps", "sleep_hours": "Sleep", "vo2max": "VO\u2082max"}, "blood": [{"date": "2025-03-15", "age": 40.85, "value": 45.76, "diff": 4.92, "parts": {"rdw": 4.4, "glucose": 2.15, "crp": 1.29, "albumin": 1.12, "wbc": 0.86, "creatinine": 0.46, "alp": 0.46, "lymphocyte_pct": 0.4, "mcv": 0.3}, "warnings": []}, {"date": "2025-09-20", "age": 41.36, "value": 41.61, "diff": 0.25, "parts": {"rdw": 2.93, "glucose": 1.31, "crp": 0.78, "albumin": 0.75, "wbc": 0.43, "alp": 0.31, "creatinine": 0.18, "lymphocyte_pct": 0.13, "mcv": 0.0}, "warnings": []}, {"date": "2026-03-18", "age": 41.85, "value": 38.34, "diff": -3.52, "parts": {"rdw": 1.47, "glucose": 0.83, "crp": 0.43, "albumin": 0.37, "mcv": -0.3, "wbc": 0.25, "alp": 0.21, "lymphocyte_pct": -0.13, "creatinine": -0.0}, "warnings": []}, {"date": "2026-10-25", "age": 42.46, "value": 35.74, "diff": -6.72, "parts": {"mcv": -0.59, "rdw": 0.37, "glucose": 0.35, "lymphocyte_pct": -0.27, "alp": 0.12, "creatinine": -0.0, "albumin": 0.0, "crp": 0.0, "wbc": 0.0}, "warnings": []}], "fitness": [{"date": "2026-02-18", "age": 41.78, "value": 44.4, "diff": 2.62, "parts": {"vo2max": 1.14, "sleep_hours": 0.69, "steps": 0.51, "resting_hr": 0.29}}, {"date": "2026-02-25", "age": 41.8, "value": 44.48, "diff": 2.68, "parts": {"vo2max": 1.11, "sleep_hours": 0.75, "steps": 0.53, "resting_hr": 0.29}}, {"date": "2026-03-04", "age": 41.82, "value": 44.35, "diff": 2.53, "parts": {"vo2max": 1.07, "sleep_hours": 0.75, "steps": 0.42, "resting_hr": 0.29}}, {"date": "2026-03-11", "age": 41.84, "value": 44.42, "diff": 2.59, "parts": {"vo2max": 0.93, "sleep_hours": 0.88, "steps": 0.49, "resting_hr": 0.29}}, {"date": "2026-03-18", "age": 41.85, "value": 44.16, "diff": 2.31, "parts": {"vo2max": 0.84, "sleep_hours": 0.75, "steps": 0.43, "resting_hr": 0.29}}, {"date": "2026-03-25", "age": 41.87, "value": 43.93, "diff": 2.06, "parts": {"vo2max": 0.7, "sleep_hours": 0.57, "steps": 0.5, "resting_hr": 0.29}}, {"date": "2026-04-01", "age": 41.89, "value": 43.87, "diff": 1.98, "parts": {"vo2max": 0.59, "sleep_hours": 0.57, "steps": 0.54, "resting_hr": 0.29}}, {"date": "2026-04-08", "age": 41.91, "value": 44.31, "diff": 2.39, "parts": {"steps": 1.02, "vo2max": 0.58, "sleep_hours": 0.5, "resting_hr": 0.29}}, {"date": "2026-04-15", "age": 41.93, "value": 44.83, "diff": 2.9, "parts": {"steps": 1.63, "vo2max": 0.58, "sleep_hours": 0.5, "resting_hr": 0.19}}, {"date": "2026-04-22", "age": 41.95, "value": 43.83, "diff": 1.88, "parts": {"steps": 0.77, "vo2max": 0.49, "sleep_hours": 0.44, "resting_hr": 0.19}}, {"date": "2026-04-29", "age": 41.97, "value": 43.7, "diff": 1.73, "parts": {"steps": 0.77, "vo2max": 0.5, "sleep_hours": 0.31, "resting_hr": 0.14}}, {"date": "2026-05-06", "age": 41.99, "value": 43.63, "diff": 1.64, "parts": {"sleep_hours": 0.5, "vo2max": 0.5, "steps": 0.45, "resting_hr": 0.19}}, {"date": "2026-05-13", "age": 42.01, "value": 43.16, "diff": 1.15, "parts": {"steps": 0.45, "vo2max": 0.25, "sleep_hours": 0.25, "resting_hr": 0.19}}, {"date": "2026-05-20", "age": 42.03, "value": 42.66, "diff": 0.63, "parts": {"sleep_hours": 0.38, "vo2max": 0.23, "resting_hr": 0.19, "steps": -0.16}}, {"date": "2026-05-27", "age": 42.05, "value": 42.51, "diff": 0.47, "parts": {"sleep_hours": 0.25, "vo2max": 0.22, "steps": -0.2, "resting_hr": 0.19}}, {"date": "2026-06-03", "age": 42.07, "value": 42.55, "diff": 0.48, "parts": {"vo2max": 0.33, "steps": -0.29, "sleep_hours": 0.25, "resting_hr": 0.19}}, {"date": "2026-06-10", "age": 42.08, "value": 42.84, "diff": 0.75, "parts": {"vo2max": 0.46, "sleep_hours": 0.31, "steps": -0.17, "resting_hr": 0.14}}, {"date": "2026-06-17", "age": 42.1, "value": 43.05, "diff": 0.95, "parts": {"vo2max": 0.46, "sleep_hours": 0.31, "resting_hr": 0.19, "steps": -0.02}}, {"date": "2026-06-24", "age": 42.12, "value": 42.92, "diff": 0.8, "parts": {"vo2max": 0.36, "sleep_hours": 0.25, "resting_hr": 0.1, "steps": 0.09}}, {"date": "2026-07-01", "age": 42.14, "value": 42.99, "diff": 0.85, "parts": {"sleep_hours": 0.38, "steps": 0.26, "vo2max": 0.12, "resting_hr": 0.1}}, {"date": "2026-07-08", "age": 42.16, "value": 42.67, "diff": 0.51, "parts": {"sleep_hours": 0.38, "steps": 0.08, "resting_hr": 0.05, "vo2max": 0.0}}, {"date": "2026-07-15", "age": 42.18, "value": 42.58, "diff": 0.4, "parts": {"sleep_hours": 0.44, "steps": -0.33, "vo2max": 0.24, "resting_hr": 0.05}}, {"date": "2026-07-22", "age": 42.2, "value": 42.63, "diff": 0.43, "parts": {"sleep_hours": 0.57, "steps": -0.33, "vo2max": 0.19, "resting_hr": 0.0}}, {"date": "2026-07-29", "age": 42.22, "value": 42.4, "diff": 0.18, "parts": {"steps": -0.64, "sleep_hours": 0.63, "vo2max": 0.19, "resting_hr": 0.0}}, {"date": "2026-08-05", "age": 42.24, "value": 42.35, "diff": 0.11, "parts": {"steps": -0.57, "sleep_hours": 0.57, "vo2max": 0.12, "resting_hr": 0.0}}, {"date": "2026-08-12", "age": 42.26, "value": 41.9, "diff": -0.36, "parts": {"steps": -0.64, "sleep_hours": 0.5, "vo2max": -0.13, "resting_hr": -0.1}}, {"date": "2026-08-19", "age": 42.28, "value": 41.52, "diff": -0.75, "parts": {"steps": -0.48, "vo2max": -0.24, "resting_hr": -0.1, "sleep_hours": 0.06}}, {"date": "2026-08-26", "age": 42.3, "value": 41.82, "diff": -0.47, "parts": {"steps": -0.35, "vo2max": -0.25, "sleep_hours": 0.13, "resting_hr": 0.0}}, {"date": "2026-09-02", "age": 42.31, "value": 41.62, "diff": -0.69, "parts": {"vo2max": -0.32, "steps": -0.28, "resting_hr": -0.1, "sleep_hours": 0.0}}, {"date": "2026-09-09", "age": 42.33, "value": 41.87, "diff": -0.46, "parts": {"vo2max": -0.25, "steps": -0.24, "sleep_hours": 0.13, "resting_hr": -0.1}}, {"date": "2026-09-16", "age": 42.35, "value": 41.55, "diff": -0.81, "parts": {"vo2max": -0.43, "steps": -0.43, "sleep_hours": 0.25, "resting_hr": -0.19}}, {"date": "2026-09-23", "age": 42.37, "value": 41.1, "diff": -1.28, "parts": {"steps": -0.64, "vo2max": -0.64, "resting_hr": -0.19, "sleep_hours": 0.19}}, {"date": "2026-09-30", "age": 42.39, "value": 40.88, "diff": -1.51, "parts": {"steps": -0.82, "vo2max": -0.68, "resting_hr": -0.19, "sleep_hours": 0.19}}, {"date": "2026-10-07", "age": 42.41, "value": 40.68, "diff": -1.73, "parts": {"steps": -0.78, "vo2max": -0.75, "resting_hr": -0.19, "sleep_hours": 0.0}}, {"date": "2026-10-14", "age": 42.43, "value": 40.57, "diff": -1.86, "parts": {"steps": -0.97, "vo2max": -0.76, "resting_hr": -0.19, "sleep_hours": 0.06}}, {"date": "2026-10-21", "age": 42.45, "value": 40.83, "diff": -1.62, "parts": {"vo2max": -0.76, "steps": -0.66, "resting_hr": -0.19, "sleep_hours": 0.0}}, {"date": "2026-10-28", "age": 42.47, "value": 40.63, "diff": -1.83, "parts": {"vo2max": -0.85, "steps": -0.79, "resting_hr": -0.19, "sleep_hours": 0.0}}, {"date": "2026-11-04", "age": 42.49, "value": 40.13, "diff": -2.35, "parts": {"steps": -1.1, "vo2max": -1.01, "resting_hr": -0.24, "sleep_hours": 0.0}}], "change": {"mcv": -0.3, "rdw": -1.1, "glucose": -0.48, "lymphocyte_pct": -0.13, "alp": -0.08, "creatinine": 0.0, "albumin": -0.37, "crp": -0.43, "wbc": -0.25}, "refs": {"phenoage": [{"label": "Levine 2018", "text": "Levine ME, Lu AT, Quach A, et al. An epigenetic biomarker of aging for lifespan and healthspan. Aging (Albany NY). 2018;10(4):573-591. Phenotypic Age (blood chemistry) is developed in this paper.", "doi": "10.18632/aging.101414"}, {"label": "Liu 2018", "text": "Liu Z, Kuo PL, Horvath S, Crimmins E, Ferrucci L, Levine M. A new aging measure captures morbidity and mortality risk across diverse subpopulations from NHANES IV: a cohort study. PLoS Med. 2018;15(12):e1002718. Validation of Phenotypic Age.", "doi": "10.1371/journal.pmed.1002718"}, {"label": "Kwon & Belsky 2021", "text": "Kwon D, Belsky DW. A toolkit for quantification of biological age from blood chemistry and organ function test data: BioAge. GeroScience. 2021;43(6):2795-2808. Source of the full-precision coefficients.", "doi": "10.1007/s11357-021-00480-5"}], "fitness": [{"label": "Zhang 2016", "text": "Zhang D, Shen X, Qi X. Resting heart rate and all-cause and cardiovascular mortality in the general population: a meta-analysis. CMAJ. 2016;188(3):E53-63.", "doi": "10.1503/cmaj.150535"}, {"label": "Paluch 2022", "text": "Paluch AE, Bajpai S, Bassett DR, et al. Daily steps and all-cause mortality: a meta-analysis of 15 international cohorts. Lancet Public Health. 2022;7(3):e219-e228.", "doi": "10.1016/S2468-2667(21)00302-9"}, {"label": "Kodama 2009", "text": "Kodama S, Saito K, Tanaka S, et al. Cardiorespiratory fitness as a quantitative predictor of all-cause mortality and cardiovascular events in healthy men and women: a meta-analysis. JAMA. 2009;301(19):2024-2035.", "doi": "10.1001/jama.2009.681"}, {"label": "Kaminsky 2015", "text": "Kaminsky LA, Arena R, Myers J. Reference standards for cardiorespiratory fitness measured with cardiopulmonary exercise testing: data from the FRIEND registry. Mayo Clin Proc. 2015;90(11):1515-1523.", "doi": "10.1016/j.mayocp.2015.07.026"}, {"label": "Cappuccio 2010", "text": "Cappuccio FP, D'Elia L, Strazzullo P, Miller MA. Sleep duration and all-cause mortality: a systematic review and meta-analysis of prospective studies. Sleep. 2010;33(5):585-592.", "doi": "10.1093/sleep/33.5.585"}]}}</script>
+<script>
+(function () {
+  var D = JSON.parse(document.getElementById("data").textContent);
+  var NS = "http://www.w3.org/2000/svg";
+  var css = getComputedStyle(document.documentElement);
+  function v(name) { return css.getPropertyValue(name).trim(); }
+  function el(tag, attrs, parent) {
+    var n = document.createElementNS(NS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function h(tag, text, parent, cls) {
+    var n = document.createElement(tag);
+    if (text != null) n.textContent = text;
+    if (cls) n.className = cls;
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function signed(x) {
+    var r = Math.round(x * 10) / 10;   // sign follows the shown value, so no "-0.0"
+    return (r > 0 ? "+" : r < 0 ? "−" : "±") + Math.abs(r).toFixed(1);
+  }
+  function fmtDate(s) {
+    var d = new Date(s + "T00:00:00");
+    return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  }
+  function label(key) { return D.labels[key] || key; }
+  function last(a) { return a[a.length - 1]; }
+
+  var series = [
+    { key: "blood", name: "Blood age (PhenoAge)", color: "--series-1", points: D.blood, dots: true },
+    { key: "fitness", name: "Fitness Age (band)", color: "--series-2", points: D.fitness, dots: false }
+  ].filter(function (s) { return s.points.length; });
+
+  // Subtitle and tiles
+  var today = new Date(D.today + "T00:00:00");
+  var age = (today - new Date(D.born + "T00:00:00")) / (365.2425 * 864e5);
+  document.getElementById("sub").textContent =
+    "Calendar age " + age.toFixed(1) + " · updated " + fmtDate(D.today);
+  var tiles = document.getElementById("tiles");
+  function tile(title, value, delta, color) {
+    var c = h("div", null, tiles, "card tile");
+    var l = h("div", null, c, "label");
+    if (color) { var k = h("span", null, l, "key"); k.style.background = "var(" + color + ")"; }
+    l.appendChild(document.createTextNode(title));
+    h("div", value, c, "value");
+    h("div", delta, c, "delta");
+  }
+  tile("Calendar age", age.toFixed(1), "years");
+  if (D.blood.length) {
+    var b = last(D.blood);
+    tile("Blood age", b.value.toFixed(1), signed(b.diff) + " yrs · test of " + fmtDate(b.date), "--series-1");
+  }
+  if (D.fitness.length) {
+    var f = last(D.fitness);
+    tile("Fitness Age", f.value.toFixed(1), signed(f.diff) + " yrs · 30 days to " + fmtDate(f.date), "--series-2");
+  }
+
+  // Legend for the trend chart (always present for 2+ series)
+  var legend = document.getElementById("trend-legend");
+  series.forEach(function (s) {
+    var sp = h("span", s.name, legend);
+    sp.style.setProperty("--c", "var(" + s.color + ")");
+  });
+
+  function niceStep(span, target) {
+    var raw = span / target, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    var n = raw / mag;
+    return (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * mag;
+  }
+
+  function drawTrend() {
+    var box = document.getElementById("trend");
+    box.textContent = "";
+    if (!series.length) { h("p", "No data yet.", box, "empty"); return; }
+    var W = Math.max(box.clientWidth, 300), H = 280;
+    var m = { l: 40, r: W < 520 ? 16 : 120, t: 12, b: 28 };
+    var all = [];
+    series.forEach(function (s) { s.points.forEach(function (p) { all.push(p); }); });
+    var t0 = Math.min.apply(null, all.map(function (p) { return Date.parse(p.date); }));
+    var t1 = Math.max.apply(null, all.map(function (p) { return Date.parse(p.date); }));
+    if (t1 === t0) { t0 -= 15 * 864e5; t1 += 15 * 864e5; }
+    var ymax = Math.max(2, Math.max.apply(null, all.map(function (p) { return Math.abs(p.diff); })));
+    var step = niceStep(2 * ymax, 4);
+    ymax = Math.ceil(ymax / step) * step;
+    function x(d) { return m.l + (Date.parse(d) - t0) / (t1 - t0) * (W - m.l - m.r); }
+    function y(val) { return m.t + (ymax - val) / (2 * ymax) * (H - m.t - m.b); }
+
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+      "aria-label": "Trend of years older or younger than calendar age" }, box);
+    for (var g = -ymax; g <= ymax + 1e-9; g += step) {
+      el("line", { x1: m.l, x2: W - m.r, y1: y(g), y2: y(g),
+        stroke: v(g === 0 ? "--axis" : "--grid"), "stroke-width": 1 }, svg);
+      el("text", { x: m.l - 6, y: y(g) + 4, "text-anchor": "end", "class": "tick" }, svg)
+        .textContent = (g > 0 ? "+" : "") + g;
+    }
+    // Month ticks
+    var start = new Date(t0), months = [];
+    var d0 = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+    for (var d = d0; d.getTime() <= t1; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) months.push(d);
+    var every = Math.max(1, Math.ceil(months.length / Math.floor((W - m.l - m.r) / 70)));
+    months.forEach(function (d, i) {
+      if (i % every) return;
+      var iso = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-01";
+      el("text", { x: x(iso), y: H - 8, "text-anchor": "middle", "class": "tick" }, svg).textContent =
+        d.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
+    });
+
+    series.forEach(function (s) {
+      var color = v(s.color);
+      var dpath = s.points.map(function (p, i) { return (i ? "L" : "M") + x(p.date) + "," + y(p.diff); }).join("");
+      el("path", { d: dpath, fill: "none", stroke: color, "stroke-width": 2,
+        "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+      if (s.dots) s.points.forEach(function (p) {
+        el("circle", { cx: x(p.date), cy: y(p.diff), r: 4.5, fill: color, stroke: v("--surface"), "stroke-width": 2 }, svg);
+      });
+      if (m.r > 40) {
+        var lp = last(s.points);
+        el("text", { x: x(lp.date) + 8, y: y(lp.diff) + 4, "class": "dlabel" }, svg)
+          .textContent = (s.key === "blood" ? "Blood " : "Fitness ") + signed(lp.diff);
+      }
+    });
+
+    // Crosshair + one tooltip listing every series
+    var cross = el("line", { y1: m.t, y2: H - m.b, stroke: v("--axis"), "stroke-width": 1, visibility: "hidden" }, svg);
+    var tip = h("div", null, box, "tip");
+    var hit = el("rect", { x: m.l, y: 0, width: W - m.l - m.r + 8, height: H, fill: "transparent", tabindex: 0 }, svg);
+    function nearest(points, t) {
+      var best = null, bd = Infinity;
+      points.forEach(function (p) { var dd = Math.abs(Date.parse(p.date) - t); if (dd < bd) { bd = dd; best = p; } });
+      return best;
+    }
+    function show(t) {
+      var anchor = nearest(all, t);
+      var xx = x(anchor.date);
+      cross.setAttribute("x1", xx); cross.setAttribute("x2", xx);
+      cross.setAttribute("visibility", "visible");
+      tip.textContent = "";
+      h("div", fmtDate(anchor.date), tip, "when");
+      series.forEach(function (s) {
+        var p = nearest(s.points, Date.parse(anchor.date));
+        var row = h("div", null, tip, "row");
+        row.style.setProperty("--c", "var(" + s.color + ")");
+        h("i", null, row);
+        h("strong", signed(p.diff) + " yrs", row);
+        h("span", (s.key === "blood" ? "Blood, " : "Fitness, ") + fmtDate(p.date), row);
+      });
+      tip.style.display = "block";
+      var left = xx / W * box.clientWidth + 12;
+      if (left + tip.offsetWidth > box.clientWidth) left = xx / W * box.clientWidth - tip.offsetWidth - 12;
+      tip.style.left = Math.max(0, left) + "px";
+      tip.style.top = "8px";
+    }
+    function hide() { cross.setAttribute("visibility", "hidden"); tip.style.display = "none"; }
+    hit.addEventListener("pointermove", function (e) {
+      var r = svg.getBoundingClientRect();
+      var px = (e.clientX - r.left) / r.width * W;
+      show(t0 + (px - m.l) / (W - m.l - m.r) * (t1 - t0));
+    });
+    hit.addEventListener("pointerleave", hide);
+    hit.addEventListener("focus", function () { show(t1); });
+    hit.addEventListener("blur", hide);
+  }
+
+  function drawBars(boxId, parts, emptyText) {
+    var box = document.getElementById(boxId);
+    box.textContent = "";
+    var keys = Object.keys(parts || {});
+    if (!keys.length) { h("p", emptyText, box, "empty"); return; }
+    keys.sort(function (a, b) { return parts[b] - parts[a]; });
+    var W = Math.max(box.clientWidth, 300), row = 28, H = keys.length * row + 8;
+    var lw = W < 480 ? 92 : 104, vw = 40;   // label column, room for the value text
+    var span = Math.max(1, Math.max.apply(null, keys.map(function (k) { return Math.abs(parts[k]); })));
+    var mid = lw + (W - lw) / 2, half = (W - lw) / 2 - vw;
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": "Years per marker" }, box);
+    el("line", { x1: mid, x2: mid, y1: 0, y2: H, stroke: v("--axis"), "stroke-width": 1 }, svg);
+    var tip = h("div", null, box, "tip");
+    keys.forEach(function (k, i) {
+      var val = parts[k], cy = i * row + 4, bh = row - 10;
+      var w = Math.abs(val) / span * half;
+      var x0 = val >= 0 ? mid + 1 : mid - 1 - w;
+      el("text", { x: 0, y: cy + bh / 2 + 4, "class": "dlabel" }, svg).textContent = label(k);
+      if (w >= 0.5) el("rect", { x: x0, y: cy, width: w, height: bh, rx: 4,
+        fill: v(val >= 0 ? "--older" : "--younger") }, svg);
+      var tx = val >= 0 ? mid + w + 6 : mid - w - 6;
+      el("text", { x: tx, y: cy + bh / 2 + 4, "class": "tick", "text-anchor": val >= 0 ? "start" : "end" }, svg)
+        .textContent = signed(val);
+      var hit = el("rect", { x: 0, y: cy - 4, width: W, height: row, fill: "transparent", tabindex: 0 }, svg);
+      function show() {
+        tip.textContent = "";
+        h("strong", signed(val) + " yrs", tip);
+        tip.appendChild(document.createTextNode(" " + label(k)));
+        tip.style.display = "block";
+        tip.style.left = Math.min(box.clientWidth - tip.offsetWidth, mid / W * box.clientWidth) + "px";
+        tip.style.top = ((cy + row) / H * box.clientHeight) + "px";
+      }
+      hit.addEventListener("pointerenter", show);
+      hit.addEventListener("focus", show);
+      hit.addEventListener("pointerleave", function () { tip.style.display = "none"; });
+      hit.addEventListener("blur", function () { tip.style.display = "none"; });
+    });
+  }
+
+  function table(boxId, head, rows) {
+    var box = document.getElementById(boxId);
+    box.textContent = "";
+    var t = h("table", null, box), tr = h("tr", null, h("thead", null, t));
+    head.forEach(function (c) { h("th", c, tr); });
+    var body = h("tbody", null, t);
+    rows.forEach(function (r) {
+      var row = h("tr", null, body);
+      r.forEach(function (c) { h("td", c, row); });
+    });
+  }
+
+  function drawAll() {
+    drawTrend();
+    var lb = D.blood.length ? last(D.blood) : null;
+    if (lb) {
+      var markerSum = Object.keys(lb.parts).reduce(function (s, k) { return s + lb.parts[k]; }, 0);
+      var baseline = lb.value - markerSum;
+      document.getElementById("parts-sub").textContent =
+        "Test of " + fmtDate(lb.date) + ". A typical healthy adult your age (reference values) scores " +
+        baseline.toFixed(1) + " (" + signed(baseline - lb.age) + " yrs); your markers move that by " +
+        signed(markerSum) + " yrs to " + lb.value.toFixed(1) + ".";
+    }
+    drawBars("parts", lb && lb.parts, "Add a blood test history to see this.");
+    drawBars("fit-parts", D.fitness.length ? last(D.fitness).parts : null, "Add band data to see this.");
+  }
+
+  // Tables (built once)
+  var trendRows = [];
+  D.blood.forEach(function (p) { trendRows.push([p.date, "Blood", p.age.toFixed(1), p.value.toFixed(1), signed(p.diff)]); });
+  D.fitness.forEach(function (p) { trendRows.push([p.date, "Fitness", p.age.toFixed(1), p.value.toFixed(1), signed(p.diff)]); });
+  trendRows.sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
+  table("trend-table", ["Date", "Measure", "Calendar age", "Body age", "Difference"], trendRows);
+
+  if (D.blood.length) {
+    var mk = Object.keys(D.blood[0].parts);
+    var head = ["Marker"].concat(D.blood.map(function (p) { return p.date; }));
+    if (D.change) head.push("Change");
+    var rows = mk.map(function (k) {
+      var r = [label(k)].concat(D.blood.map(function (p) { return signed(p.parts[k]); }));
+      if (D.change) r.push(signed(D.change[k]));
+      return r;
+    });
+    table("parts-table", head, rows);
+  }
+
+  function refs(id, list) {
+    var ol = document.getElementById(id);
+    list.forEach(function (r) {
+      var li = h("li", r.text + " ", ol);
+      var a = h("a", "doi:" + r.doi, li);
+      a.href = "https://doi.org/" + r.doi;
+      a.rel = "noopener";
+    });
+  }
+  refs("refs-pheno", D.refs.phenoage);
+  refs("refs-fit", D.refs.fitness);
+
+  drawAll();
+  var timer;
+  window.addEventListener("resize", function () { clearTimeout(timer); timer = setTimeout(drawAll, 150); });
+  if (window.matchMedia) {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
+      css = getComputedStyle(document.documentElement); drawAll();
+    });
+  }
+})();
+</script>
+</body>
+</html>

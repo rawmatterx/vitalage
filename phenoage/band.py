@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Dict, List, Optional
 
+from .citations import FITNESS
 from .fitness import fitness_age
 
 WINDOW_DAYS = 30
@@ -77,9 +78,11 @@ def read_rows(path):
     return rows
 
 
-def summarise(rows):
-    """Medians of the last WINDOW_DAYS days, with non-wear and bad values dropped."""
-    end = max(day for day, _ in rows)
+def summarise(rows, end=None):
+    """Medians of the WINDOW_DAYS days up to `end` (default: the latest day),
+    with non-wear and bad values dropped."""
+    if end is None:
+        end = max(day for day, _ in rows)
     start = end - timedelta(days=WINDOW_DAYS - 1)
     recent = [(d, v) for d, v in rows if start <= d <= end]
 
@@ -155,6 +158,8 @@ def main(argv=None):
         print("warning: " + warning)
     print("\nLiterature-based score from separate studies, not a validated "
           "clock. Not a diagnostic tool.")
+    print("Sources: " + "; ".join("%s (doi:%s)" % (label, doi)
+                                  for label, _, doi in FITNESS))
     return 0
 
 

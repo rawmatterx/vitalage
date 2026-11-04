@@ -15,6 +15,35 @@ The Python package is still called `phenoage`.
 > roughly 20–84 and has not been validated for Indian populations. Use it to
 > track your own trend over time, not to make medical decisions.
 
+## Scientific basis
+
+Blood age is **Phenotypic Age (PhenoAge)**, a published, peer-reviewed
+measure. VitalAge uses its coefficients unchanged and adds no fitted
+parameters of its own.
+
+1. **Developed in:** Levine ME, Lu AT, Quach A, et al. An epigenetic
+   biomarker of aging for lifespan and healthspan. *Aging (Albany NY)*
+   2018;10(4):573–591.
+   [doi:10.18632/aging.101414](https://doi.org/10.18632/aging.101414)
+   Phenotypic Age was built from 9 blood markers plus age by modelling
+   mortality in US NHANES III.
+2. **Validated in:** Liu Z, Kuo PL, Horvath S, Crimmins E, Ferrucci L,
+   Levine M. A new aging measure captures morbidity and mortality risk across
+   diverse subpopulations from NHANES IV: a cohort study. *PLoS Med*
+   2018;15(12):e1002718.
+   [doi:10.1371/journal.pmed.1002718](https://doi.org/10.1371/journal.pmed.1002718)
+   Independent sample of 11,432 adults aged 20–84.
+3. **Coefficient precision cross-checked against:** Kwon D, Belsky DW. A
+   toolkit for quantification of biological age from blood chemistry and
+   organ function test data: BioAge. *GeroScience* 2021;43(6):2795–2808.
+   [doi:10.1007/s11357-021-00480-5](https://doi.org/10.1007/s11357-021-00480-5)
+   The test suite compares every result against BioAge's own formula.
+
+Fitness Age is **not** a published clock; it combines effects from separate
+meta-analyses (see [References](#references)). VitalAge is an independent
+implementation and is not affiliated with or endorsed by any of these
+authors. If you use VitalAge, please cite the papers above.
+
 ## Tests you need
 
 All nine markers come from a standard package plus one add-on:
@@ -145,6 +174,34 @@ years older".
 - HRV is left out on purpose: wearable HRV is not consistent across devices
   or studies.
 
+## Dashboard with trends over time
+
+```bash
+python3 -m phenoage.dashboard --born 1984-05-10 --sex male \
+  --blood examples/blood_history.csv --band examples/band_history.csv \
+  --out dashboard.html
+```
+
+Open `dashboard.html` in any browser; it works offline. It shows:
+
+- your calendar age, latest blood age and latest Fitness Age;
+- a chart of "years older or younger than calendar age" over time, with every
+  blood test as a point and Fitness Age every week (each from the 30 days
+  before it);
+- what drives your latest blood age and Fitness Age, marker by marker;
+- table views of every number, and the full list of citations with DOIs.
+
+Blood history is a CSV with one row per test and columns named
+`marker (unit)`, in the units on your report; see `examples/blood_history.csv`:
+
+```
+date,albumin (g/dL),creatinine (mg/dL),glucose (mg/dL),crp (mg/L),lymphocyte_pct (%),mcv (fL),rdw (%),alp (U/L),wbc (cells/cumm)
+2026-10-25,4.4,0.90,93,1.0,32,88,13.1,76,6500
+```
+
+Either `--blood` or `--band` can be left out. The example files are made-up
+sample data.
+
 ## Tests
 
 ```bash
@@ -161,26 +218,30 @@ and the Fitness Age curves against the published numbers.
 2. **Per-marker explanation in years** (done, `--explain`)
 3. **Band Fitness Age** from resting HR, steps, sleep and VO₂max (done,
    `python3 -m phenoage.band`)
-4. Dashboard with trends over time
+4. **Dashboard with trends over time** (done, `python3 -m phenoage.dashboard`)
 5. Missing-marker handling with a range instead of a single number
 6. Refit a combined blood + activity model on NHANES 2003–2006
 
 ## References
 
-- Levine ME et al. An epigenetic biomarker of aging for lifespan and
-  healthspan. *Aging* 2018;10(4):573–591.
-- Liu Z et al. A new aging measure captures morbidity and mortality risk
-  across diverse subpopulations from NHANES IV. *PLOS Medicine* 2018.
-- Kwon D, Belsky DW. A toolkit for quantification of biological age from
-  blood chemistry and organ function test data: BioAge. *GeroScience* 2021.
-- Zhang D et al. Resting heart rate and all-cause and cardiovascular
-  mortality in the general population: a meta-analysis. *CMAJ* 2016;188(3):E53–63.
+Fitness Age sources (all DOIs checked against Crossref):
+
+- Zhang D, Shen X, Qi X. Resting heart rate and all-cause and cardiovascular
+  mortality in the general population: a meta-analysis. *CMAJ*
+  2016;188(3):E53–63. [doi:10.1503/cmaj.150535](https://doi.org/10.1503/cmaj.150535)
 - Paluch AE et al. Daily steps and all-cause mortality: a meta-analysis of
   15 international cohorts. *Lancet Public Health* 2022;7(3):e219–28.
+  [doi:10.1016/S2468-2667(21)00302-9](https://doi.org/10.1016/S2468-2667(21)00302-9)
 - Kodama S et al. Cardiorespiratory fitness as a quantitative predictor of
-  all-cause mortality and cardiovascular events. *JAMA* 2009;301(19):2024–35.
-- Kaminsky LA et al. Reference standards for cardiorespiratory fitness
-  measured with cardiopulmonary exercise testing (FRIEND registry).
-  *Mayo Clin Proc* 2015;90(11):1515–23.
+  all-cause mortality and cardiovascular events in healthy men and women.
+  *JAMA* 2009;301(19):2024–35. [doi:10.1001/jama.2009.681](https://doi.org/10.1001/jama.2009.681)
+- Kaminsky LA, Arena R, Myers J. Reference standards for cardiorespiratory
+  fitness measured with cardiopulmonary exercise testing: data from the
+  FRIEND registry. *Mayo Clin Proc* 2015;90(11):1515–23.
+  [doi:10.1016/j.mayocp.2015.07.026](https://doi.org/10.1016/j.mayocp.2015.07.026)
 - Cappuccio FP et al. Sleep duration and all-cause mortality: a systematic
   review and meta-analysis of prospective studies. *Sleep* 2010;33(5):585–92.
+  [doi:10.1093/sleep/33.5.585](https://doi.org/10.1093/sleep/33.5.585)
+
+The same list lives in `phenoage/citations.py`, which the command-line
+tools and the dashboard print from.

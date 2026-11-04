@@ -6,6 +6,7 @@ Every marker takes a value and a unit, exactly as printed on the report.
 import argparse
 import sys
 
+from .citations import short_phenoage_credit
 from .core import MARKERS, phenoage
 from .explain import explain
 from .units import accepted_units, factor
@@ -77,7 +78,8 @@ def main(argv=None):
         print("warning: " + warning)
     if args.explain:
         print_explanation(result, report)
-    print("\nNot a diagnostic tool. Trained on US data; not validated for Indian populations.")
+    print("\n" + short_phenoage_credit())
+    print("Not a diagnostic tool. Trained on US data; not validated for Indian populations.")
     return 0
 
 
