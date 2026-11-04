@@ -25,6 +25,7 @@ FILES = [
     NHANES % ("2003", "L11_C.xpt"),       # CRP
     NHANES % ("2003", "L25_C.xpt"),       # complete blood count
     NHANES % ("2003", "PAXRAW_C.ZIP"),    # hip accelerometer, minute by minute
+    NHANES % ("2003", "BPX_C.xpt"),       # exam blood pressure and pulse
     MORT % "NHANES_2003_2004_MORT_2019_PUBLIC.dat",
     # 2005-2006 (cycle D)
     NHANES % ("2005", "DEMO_D.xpt"),
@@ -32,6 +33,7 @@ FILES = [
     NHANES % ("2005", "CRP_D.xpt"),
     NHANES % ("2005", "CBC_D.xpt"),
     NHANES % ("2005", "PAXRAW_D.ZIP"),
+    NHANES % ("2005", "BPX_D.xpt"),
     MORT % "NHANES_2005_2006_MORT_2019_PUBLIC.dat",
 ]
 

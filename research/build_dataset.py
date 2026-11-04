@@ -35,9 +35,9 @@ from phenoage.core import linear_predictor, phenoage_from_canonical  # noqa: E40
 
 CYCLES = {
     "2003-2004": {"demo": "DEMO_C", "bio": "L40_C", "crp": "L11_C", "cbc": "L25_C",
-                  "pax": "paxraw_c.xpt", "mort": "NHANES_2003_2004_MORT_2019_PUBLIC.dat"},
+                  "pax": "paxraw_c.xpt", "bpx": "BPX_C", "mort": "NHANES_2003_2004_MORT_2019_PUBLIC.dat"},
     "2005-2006": {"demo": "DEMO_D", "bio": "BIOPRO_D", "crp": "CRP_D", "cbc": "CBC_D",
-                  "pax": "paxraw_d.xpt", "mort": "NHANES_2005_2006_MORT_2019_PUBLIC.dat"},
+                  "pax": "paxraw_d.xpt", "bpx": "BPX_D", "mort": "NHANES_2005_2006_MORT_2019_PUBLIC.dat"},
 }
 
 NONWEAR_RUN = 60
@@ -46,6 +46,7 @@ MIN_DAYS = 4
 MVPA_CPM = 2020
 MAX_COUNT = 32767
 CENSOR_CPM = 500
+SED_CPM = 100
 
 
 def xpt(name):
@@ -89,7 +90,7 @@ def blood(cycle, files):
     return df
 
 
-def person_features(seqn, counts, steps):
+def person_features(seqn, counts, steps, hours=None):
     """Summaries for one person's 10,080 minutes (7 days)."""
     counts = counts.astype(float)
     counts[counts > MAX_COUNT] = np.nan
@@ -116,13 +117,73 @@ def person_features(seqn, counts, steps):
     out["wear_min_per_day"] = len(c) / len(valid)
     out["cpm"] = c.mean()
     out["mvpa_min_per_day"] = (c >= MVPA_CPM).sum() / len(valid)
+    out["sed_min_per_day"] = (c < SED_CPM).sum() / len(valid)
+    # Smirnova et al. 2020 style: total and log-total activity per day, and
+    # transition probabilities between active (>= 100 counts) and sedentary bouts
+    out["tac_per_day"] = c.sum() / len(valid)
+    out["tlac_per_day"] = np.log1p(c).sum() / len(valid)
+    astp, satp = [], []
+    for sl in valid:
+        a = counts[sl][wear[sl]] >= SED_CPM
+        if len(a) < 2:
+            continue
+        runs = np.diff(np.flatnonzero(np.diff(np.concatenate(([-1], a.astype(int), [-1]))) != 0))
+        kinds = a[np.concatenate(([0], np.cumsum(runs)[:-1]))]
+        if kinds.any():
+            astp.append(1.0 / runs[kinds].mean())
+        if (~kinds).any():
+            satp.append(1.0 / runs[~kinds].mean())
+    out["astp"] = np.mean(astp) if astp else np.nan
+    out["satp"] = np.mean(satp) if satp else np.nan
+    if hours is not None:
+        out.update(rhythm(counts, wear, hours, valid))
     if steps is not None:
         s = np.concatenate([steps[sl][wear[sl]] for sl in valid]).astype(float)
         out["steps_per_day"] = np.nansum(s) / len(valid)
         # Tudor-Locke et al. 2009: count steps only in minutes >= 500 counts,
         # which removes the 7164's spurious steps during light movement
         out["steps_censored_per_day"] = np.nansum(np.where(c >= CENSOR_CPM, s, 0)) / len(valid)
+        # Peak 30-minute cadence: mean of each valid day's 30 highest step-minutes
+        peaks = []
+        for sl in valid:
+            day = np.where(wear[sl], steps[sl], 0).astype(float)
+            day = np.nan_to_num(day)
+            peaks.append(np.sort(day)[-30:].mean())
+        out["peak30_cadence"] = float(np.mean(peaks))
     return out
+
+
+def rhythm(counts, wear, hours, valid):
+    """Non-parametric rest-activity rhythm (van Someren 1999) on hourly means.
+
+    NHANES 2003-06 asked people to remove the monitor at night, so non-wear
+    minutes count as zero activity here; the rhythm measures therefore mix
+    true rest with time the monitor was off.
+    """
+    x = np.where(wear, np.nan_to_num(counts), 0.0)
+    hourly, hod = [], []
+    for sl in valid:
+        h = hours[sl].astype(int)
+        v = x[sl]
+        for hr in range(24):
+            m = h == hr
+            if m.any():
+                hourly.append(v[m].mean())
+                hod.append(hr)
+    hourly, hod = np.array(hourly), np.array(hod)
+    profile = np.array([hourly[hod == hr].mean() if (hod == hr).any() else np.nan for hr in range(24)])
+    if np.isnan(profile).any() or len(hourly) < 48:
+        return {}
+    ext = np.concatenate([profile, profile])
+    l5 = min(ext[i:i + 5].mean() for i in range(24))
+    m10 = max(ext[i:i + 10].mean() for i in range(24))
+    mean = hourly.mean()
+    var = ((hourly - mean) ** 2).sum()
+    n, p = len(hourly), 24
+    is_ = n * ((profile - mean) ** 2).sum() / (p * var) if var > 0 else np.nan
+    iv = n * (np.diff(hourly) ** 2).sum() / ((n - 1) * var) if var > 0 else np.nan
+    return {"l5": l5, "m10": m10, "ra": (m10 - l5) / (m10 + l5) if m10 + l5 > 0 else np.nan,
+            "is": is_, "iv": iv}
 
 
 def activity(files, eligible):
@@ -152,7 +213,7 @@ def _summarise(chunk, eligible):
         g = g.sort_values("PAXN")
         counts = g.PAXINTEN.round().to_numpy()
         steps = g.PAXSTEP.round().to_numpy() if has_steps else None
-        out.append(person_features(seqn, counts, steps))
+        out.append(person_features(seqn, counts, steps, g.PAXHOUR.round().to_numpy()))
     return out
 
 
@@ -168,6 +229,10 @@ def main():
         print("%s: accelerometer" % cycle, flush=True)
         act = activity(files, set(df.SEQN))
         df = df.merge(act, on="SEQN", how="left")
+        # Exam pulse: 60-second seated pulse after 5 minutes' rest
+        bpx = xpt(files["bpx"])[["SEQN", "BPXPLS"]].rename(columns={"BPXPLS": "pulse"})
+        bpx["SEQN"] = bpx.SEQN.astype(int)
+        df = df.merge(bpx, on="SEQN", how="left")
         print("  %d with >= %d valid days" % ((df.valid_days >= MIN_DAYS).sum(), MIN_DAYS), flush=True)
         frames.append(df)
     out = pd.concat(frames, ignore_index=True)
