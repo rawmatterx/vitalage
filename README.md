@@ -262,6 +262,64 @@ Leave a cell blank if that marker was not tested; the test then shows as a
 range (a vertical bar on the chart). Either `--blood` or `--band` can be left
 out. The example files are made-up sample data.
 
+## VitalAge: one number from blood and steps
+
+Add your band's typical daily steps to a full blood report:
+
+```bash
+python3 -m phenoage --age 42 --albumin 4.3 g/dL --creatinine 0.9 mg/dL \
+  --glucose 95 mg/dL --crp 1.2 mg/L --lymphocyte_pct 32 % --mcv 88 fL \
+  --rdw 13.1 % --alp 78 U/L --wbc 6800 cells/cumm --steps 8400
+```
+
+```
+VitalAge (blood + steps): 39.7  (-2.3 years)
+  Typical person your age : 41.2
+  Blood (PhenoAge)        : -0.4 yrs
+  Steps                   : -1.1 yrs
+  Band-to-hip step conversion is uncertain; VitalAge could be 37.3 to 44.0.
+```
+
+Unlike Fitness Age, VitalAge is **fitted to deaths**, not assembled from
+separate studies. `research/` downloads public NHANES 2003–2006 (blood tests,
+one week of hip accelerometer data, and NCHS death records through 2019),
+fits a Gompertz survival model on age, PhenoAge acceleration and daily steps,
+and turns it into an age with the same method Levine used for PhenoAge. It
+is shipped (`phenoage/combined.py`) only because it predicted deaths better
+than PhenoAge alone on held-out data:
+
+| Held-out test (NHANES 2005–06, 2,885 adults, 535 deaths) | C-index |
+|---|---|
+| Age alone (fit 2003–04, tested 2005–06) | 0.844 |
+| PhenoAge | 0.857 |
+| PhenoAge + daily steps (VitalAge), 5-fold cross-validated | 0.864 (+0.006, 95% CI +0.002 to +0.010) |
+
+The gain over PhenoAge is real but small. Each doubling of daily steps is
+worth about −3.8 years at the same blood age; each year of PhenoAge above
+average for your age adds about 0.4 years.
+
+**Limits to know:**
+- The model learned from a hip-worn research accelerometer. Wrist bands count
+  roughly 1,400 more steps a day, so band steps are converted as
+  `band − 1,400`, but the studies behind that offset show wide disagreement
+  (about −2,300 to +5,200 steps/day). VitalAge prints the range this
+  uncertainty allows, which is several years wide.
+- Unweighted US data from 2003–2006, one week of activity at baseline, and
+  people who were already ill walked less. Not validated in Indian
+  populations. Not a diagnostic tool.
+
+Full methods, numbers and the band-to-hip mapping are in
+[`research/RESULTS.md`](research/RESULTS.md). To reproduce (about 1 GB of
+downloads):
+
+```bash
+python3 -m venv .venv-research && .venv-research/bin/pip install "numpy<2.1" "scipy<1.14" "pandas<2.3"
+python3 research/fetch_nhanes.py
+(cd research/data && unzip -o PAXRAW_C.ZIP && unzip -o PAXRAW_D.ZIP)
+.venv-research/bin/python research/build_dataset.py
+.venv-research/bin/python research/fit_model.py
+```
+
 ## Tests
 
 ```bash
@@ -280,7 +338,8 @@ and the Fitness Age curves against the published numbers.
    `python3 -m phenoage.band`)
 4. **Dashboard with trends over time** (done, `python3 -m phenoage.dashboard`)
 5. **Missing-marker handling** with a range instead of a single number (done)
-6. Refit a combined blood + activity model on NHANES 2003–2006
+6. **Combined blood + activity model refitted on NHANES 2003–2006** (done:
+   VitalAge, `--steps`; see `research/RESULTS.md`)
 
 ## References
 

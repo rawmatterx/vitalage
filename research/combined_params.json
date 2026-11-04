@@ -1,0 +1,35 @@
+{
+  "ship": true,
+  "source": "NHANES 2005-2006, NCHS linked mortality through 2019; research/fit_model.py",
+  "n": 2885,
+  "deaths": 535,
+  "age_model": {
+    "b0": -13.200025874398705,
+    "b_age": 0.09464351804515815,
+    "gamma": 0.009287803205646459
+  },
+  "combined_model": {
+    "b0": -8.38502130499207,
+    "b_age": 0.08253806274719121,
+    "b_pheno_accel": 0.040231009990789504,
+    "b_log_steps": -0.5237108253875615,
+    "gamma": 0.011370643974707117
+  },
+  "accel_intercept": -7.155944354779851,
+  "accel_slope": 1.0604280372675574,
+  "accel_clip": [
+    -12.450650043285348,
+    29.37951112708095
+  ],
+  "years_per_age_year": 0.8720941956934551,
+  "years_per_accel_year": 0.4250794013341062,
+  "K": 0.1501436511192038,
+  "years_per_doubling_steps": -3.835536648932517,
+  "reference_hip_steps": 5784.571428571428,
+  "band_to_hip_offset": 1400.0,
+  "heldout_c_change": 0.0060475428372234186,
+  "heldout_c_change_ci": [
+    0.002248780036042242,
+    0.010471128263649985
+  ]
+}
