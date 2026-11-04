@@ -1,4 +1,4 @@
-"""Download the public NHANES 2003-2006 files used to refit the model.
+"""Download the public NHANES 2003-2006 and 2011-2014 files used in research/
 
     python3 research/fetch_nhanes.py            # into research/data/
 
@@ -35,6 +35,25 @@ FILES = [
     NHANES % ("2005", "PAXRAW_D.ZIP"),
     NHANES % ("2005", "BPX_D.xpt"),
     MORT % "NHANES_2005_2006_MORT_2019_PUBLIC.dat",
+    # 2011-2012 (G) and 2013-2014 (H): wrist accelerometry as daily (PAXDAY)
+    # and hourly (PAXHR, ~130-145 MB each) summaries. No CRP or hs-CRP was
+    # measured in these cycles.
+    NHANES % ("2011", "DEMO_G.xpt"),
+    NHANES % ("2011", "BIOPRO_G.xpt"),
+    NHANES % ("2011", "CBC_G.xpt"),
+    NHANES % ("2011", "BPX_G.xpt"),
+    NHANES % ("2011", "PAXDAY_G.xpt"),    # daily MIMS, wear/sleep/non-wear minutes
+    NHANES % ("2011", "PAXHD_G.xpt"),     # monitor header: start time, data quality
+    NHANES % ("2011", "PAXHR_G.xpt"),     # hourly MIMS and wake/sleep/non-wear minutes
+    MORT % "NHANES_2011_2012_MORT_2019_PUBLIC.dat",
+    NHANES % ("2013", "DEMO_H.xpt"),
+    NHANES % ("2013", "BIOPRO_H.xpt"),
+    NHANES % ("2013", "CBC_H.xpt"),
+    NHANES % ("2013", "BPX_H.xpt"),
+    NHANES % ("2013", "PAXDAY_H.xpt"),
+    NHANES % ("2013", "PAXHD_H.xpt"),
+    NHANES % ("2013", "PAXHR_H.xpt"),
+    MORT % "NHANES_2013_2014_MORT_2019_PUBLIC.dat",
 ]
 
 

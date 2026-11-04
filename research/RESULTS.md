@@ -149,3 +149,47 @@ Feature definitions follow Troiano et al. 2008 (wear, MVPA), Tudor-Locke et al. 
 - ActiGraph 7164 hip counts and its step function are not the same as a wrist band's step count; band steps typically run higher, so coefficients do not transfer one-to-one to consumer bands.
 - US data from 2003-2006; not validated in Indian populations.
 - The simplified non-wear rule may count some low-movement wear as non-wear.
+
+## 5. Wrist study, NHANES 2011-2014: pre-registration
+
+Written and committed before any 2011-2014 model was fitted or any test row
+was looked at. Code: `research/wrist.py`.
+
+- **Data.** NHANES 2011-2012 and 2013-2014 adults aged 20-79 with the 8
+  available PhenoAge markers (CRP was not measured in these cycles), the
+  exam pulse where present, and >= 4 valid days of 24-hour wrist ActiGraph
+  GT3X+ data from the daily (PAXDAY) and hourly (PAXHR) summaries. A valid
+  day is a full 1,440-minute day with >= 16 h classified as wake or sleep
+  wear. Mortality: NCHS linked mortality through 31 Dec 2019.
+- **Primary outcome.** 5-year all-cause mortality (follow-up truncated at 60
+  months), Harrell's C, with the difference vs the blood-only baseline and a
+  paired bootstrap 95% CI (200 resamples). Also reported: calibration
+  (mean predicted vs Kaplan-Meier observed, calibration slope).
+- **CRP.** (a) PhenoAge computed with CRP fixed at the reference value
+  (1 mg/L). Because CRP enters as a constant for everyone, setting it to the
+  range ends (0.2 or 10 mg/L) shifts every PhenoAge equally and cannot change
+  any C-index; this is reported, not tested. (b) A ridge-penalised refit of
+  the 8 markers plus age, as a second blood baseline.
+- **Test set.** 30% of eligible adults, stratified by death, drawn with a
+  fixed seed; the SEQNs and their SHA-256 are committed before fitting.
+- **Candidates** (all add age and capped PhenoAge acceleration, except W8):
+  W1 log daily MIMS volume; W2 sleep duration (linear + squared);
+  W3 sleep regularity (SD of nightly sleep minutes) and sleep midpoint with
+  its SD; W4 rest-activity rhythm (IS, IV, relative amplitude); W5 exam
+  pulse; W6 MIMS + sleep duration + pulse; W7 all wrist features + pulse
+  (ridge); W8 ridge refit of the 8 markers + all wrist features + pulse.
+  Minutes of moderate-to-vigorous activity cannot be computed from hourly
+  summaries and are not tested.
+- **Choices made only by 5-fold CV in the 70%:** the PhenoAge acceleration
+  cap, ridge penalties, and the deployed model.
+- **Deployment rule.** Order: W5, W1, W2, W3, W4, W6, W7, W8. Start from the
+  blood baseline (age + PhenoAge acceleration); step up only if the
+  out-of-fold 5-year C beats the current choice by >= 0.003 with the
+  bootstrap CI above zero, on the same people.
+- **Shipping rule.** A combined VitalAge ships only if the deployed model's
+  5-year C gain over the blood baseline on the locked 30% has a 95% CI
+  that excludes zero.
+- **Amendments before locking (no model fitted yet).** Ages are 20-79, not
+  20-84, because these cycles record everyone aged 80+ as 80. Sleep
+  midpoint is kept on a noon-to-noon clock so that 23:50 and 00:10 are
+  20 minutes apart.
