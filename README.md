@@ -474,3 +474,9 @@ Fitness Age sources (all DOIs checked against Crossref):
 
 The same list lives in `phenoage/citations.py`, which the command-line
 tools and the dashboard print from.
+
+## Licence
+
+VitalAge is released under the [Apache License 2.0](LICENSE). Copyright
+2026 Arup Roy. The published clocks it implements (PhenoAge and the papers
+above) belong to their authors; please cite them.

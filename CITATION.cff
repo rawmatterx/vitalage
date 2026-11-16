@@ -8,6 +8,7 @@ type: software
 authors:
   - name: "Arup Roy"
 repository-code: "https://github.com/rawmatterx/vitalage"
+license: Apache-2.0
 references:
   - type: article
     title: "An epigenetic biomarker of aging for lifespan and healthspan"
