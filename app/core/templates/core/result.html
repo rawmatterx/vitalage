@@ -4,7 +4,7 @@
 {% block content %}
   <p class="steps">Step 3 of 3</p>
   <h1>Your result</h1>
-  <p class="lead">From one blood test{% if test_date %} on {{ test_date|date:"j M Y" }}{% endif %}, at age {{ r.age }}. Nothing has been saved.</p>
+  <p class="lead">From your blood test on {{ test_date|date:"j M Y" }}, at age {{ r.age|one }}. Saved to your history.</p>
 
   {% if r.warnings %}<div class="warn"><ul>{% for w in r.warnings %}<li>{{ w }}</li>{% endfor %}</ul></div>{% endif %}
 
@@ -41,7 +41,7 @@
       {% endfor %}
     </div>
   </section>
-  <p class="note">Pace from a single test is noisy: a cold raises CRP and white cells. A pace you can trust needs 3 tests over at least a year, which comes when results can be saved.</p>
+  <p class="note">Pace from a single test is noisy: a cold raises CRP and white cells. A pace you can trust needs 3 full tests over at least a year; History shows it once you have them.</p>
   {% else %}
   <section class="card" aria-labelledby="h-range">
     <h2 id="h-range">Internal age, as a range</h2>
@@ -54,13 +54,14 @@
   </section>
   {% endif %}
 
-  <p class="note">VitalAge (beta) combines this with your fitness band. It will appear once band data can be added.</p>
+  <p class="note">VitalAge (beta) combines this with your fitness band. It appears on History once you <a href="{% url 'band' %}">add band data</a> for the month of this test.</p>
 
   <div class="actions">
-    <form method="post" action="{% url 'add_report' %}">
-      {% csrf_token %}{% for field in form %}{{ field.as_hidden }}{% endfor %}
-      <button class="btn secondary" type="submit">Edit values</button>
-    </form>
-    <a class="btn secondary" href="{% url 'add_report' %}">Start again with another report</a>
+    <a class="btn" href="{% url 'history' %}">See my history</a>
+    <a class="btn secondary" href="{% url 'add_report' %}">Add another report</a>
   </div>
+  <form method="post" action="{% url 'delete_report' test.pk %}" class="note"
+        onsubmit="return confirm('Delete this report from your history? This cannot be undone.')">
+    {% csrf_token %}<button class="linkish" type="submit">Delete this report</button>
+  </form>
 {% endblock %}

@@ -1,0 +1,62 @@
+{% extends "core/base.html" %}
+{% load vitalage %}
+{% block title %}History · VitalAge{% endblock %}
+{% block content %}
+  <h1>Your history</h1>
+  {% if not rows %}
+    <p class="lead">No blood reports saved yet. Add your first one to see your internal age.</p>
+    <div class="actions"><a class="btn" href="{% url 'add_report' %}">Add a blood report</a></div>
+  {% else %}
+  <section class="card" aria-labelledby="h-pace">
+    <h2 id="h-pace">Pace of aging</h2>
+    {% if pace %}
+      <div class="metrics">
+        <div class="metric"><div class="k">Pace</div><div class="v">{{ pace.pace|two }}</div>
+          <div class="s">internal-age years per calendar year</div></div>
+        <div class="metric"><div class="k">95% range</div><div class="v">{{ pace.ci.0|two }} to {{ pace.ci.1|two }}</div>
+          <div class="s">from {{ pace.n_tests }} full tests over {{ pace.years|one }} years</div></div>
+      </div>
+      <p class="note">Below 1.00 means your internal age is rising more slowly than the calendar.</p>
+    {% else %}
+      <p>Pace needs 3 full tests (all 9 markers) spread over at least a year.
+        {% if tests_needed %}{{ tests_needed }} more full test{{ tests_needed|pluralize }} to unlock it.{% else %}Your tests span less than a year so far.{% endif %}</p>
+    {% endif %}
+  </section>
+
+  <section class="card" aria-labelledby="h-tests">
+    <h2 id="h-tests" style="margin-bottom:12px">Blood tests</h2>
+    <table class="review history">
+      <thead><tr><th>Date</th><th>Internal age</th><th>VitalAge</th></tr></thead>
+      <tbody>
+      {% for row in rows %}
+        <tr>
+          <td><a href="{% url 'result' row.test.pk %}">{{ row.date|date:"j M Y" }}</a><span class="range">age {{ row.age|one }}</span></td>
+          <td class="num">{% if row.test.complete %}{{ row.result.internal_age|one }}{% else %}{{ row.result.internal_low|one }} to {{ row.result.internal_high|one }}{% endif %}
+            <span class="range {% if row.gap > 0.05 %}older{% elif row.gap < -0.05 %}younger{% endif %}">{{ row.gap|signed }} yrs</span></td>
+          <td class="num">{% if row.vitalage %}{{ row.vitalage.vitalage|one }}{% else %}<span class="missing">needs band data</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if complete_count < rows|length %}<p class="note">A range means some markers were not entered.</p>{% endif %}
+  </section>
+  {% endif %}
+
+  <section class="card" aria-labelledby="h-band">
+    <h2 id="h-band" style="margin-bottom:12px">Fitness band</h2>
+    {% if fitness %}
+    <table class="review history">
+      <thead><tr><th>30 days from</th><th>Fitness Age</th></tr></thead>
+      <tbody>
+      {% for f in fitness %}
+        <tr><td>{{ f.start|date:"j M Y" }}<span class="range">{{ f.month.device_model }}</span></td>
+          <td class="num">{% if f.result %}{{ f.result.fitness_age|one }}{% else %}<span class="missing">not enough days</span>{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p>No band data yet. The pilot needs at least 30 days around each blood test.</p>
+    {% endif %}
+    <div class="actions"><a class="btn secondary" href="{% url 'band' %}">Add band data</a></div>
+  </section>
+{% endblock %}

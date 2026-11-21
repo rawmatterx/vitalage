@@ -1,4 +1,4 @@
-"""Screens 1 to 4: invite welcome, sign in, consent, about you.
+"""Screens 1 to 4 (invite welcome, sign in, consent, about you) and 11 (my data).
 
 How someone gets in:
 1. The coordinator runs `python app/manage.py invite person@example.com`.
@@ -7,15 +7,22 @@ How someone gets in:
 3. Later visits: /signin/ -> email -> 6-digit code -> signed in.
 """
 
+import json
+
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone, translation
 from django.views.decorators.http import require_POST
 
 from research.models import Participant
 
+from core import records
+
+from . import privacy
 from .crypto import encrypt
 from .decorators import next_step
 from .emails import send_code
@@ -139,3 +146,68 @@ def about(request):
             AuditLog.record(request.user, "about_saved")
         return redirect("add_report")
     return render(request, "identity/about.html", {"form": form})
+
+
+def my_data(request):
+    """Screen 11: download, change consent, withdraw, delete."""
+    if not request.user.is_authenticated:
+        return redirect("signin")
+    link = PersonLink.objects.filter(account=request.user).first()
+    tests = records.tests_for(link).count() if link else 0
+    months = link and Participant.objects.get(pk=link.participant_id).band_months.count() or 0
+    return render(request, "identity/my_data.html", {
+        "link": link, "tests": tests, "months": months,
+        "in_study": ConsentRecord.has_active(request.user),
+        "recontact": ConsentRecord.has_active(request.user, "recontact"),
+    })
+
+
+def download_my_data(request):
+    if not request.user.is_authenticated:
+        return redirect("signin")
+    AuditLog.record(request.user, "data_downloaded")
+    body = json.dumps(records.export(request.user), indent=2, ensure_ascii=False)
+    response = HttpResponse(body, content_type="application/json; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="vitalage-my-data.json"'
+    return response
+
+
+@require_POST
+def change_recontact(request):
+    """Turn the optional "contact me about follow-up" consent on or off."""
+    if not request.user.is_authenticated:
+        return redirect("signin")
+    want = request.POST.get("recontact") == "on"
+    has = ConsentRecord.has_active(request.user, "recontact")
+    if want and not has:
+        version = ConsentVersion.current(request.user.language) or ConsentVersion.current("en")
+        ConsentRecord.objects.create(account=request.user, consent_version=version,
+                                     purpose="recontact")
+        AuditLog.record(request.user, "consent_granted", "recontact")
+    elif has and not want:
+        ConsentRecord.objects.filter(account=request.user, purpose="recontact",
+                                     withdrawn_at__isnull=True).update(withdrawn_at=timezone.now())
+        AuditLog.record(request.user, "consent_withdrawn", "recontact")
+    messages.success(request, translation.gettext("Your choice is saved."))
+    return redirect("my_data")
+
+
+def withdraw(request):
+    """Asks once, then deletes the research data and signs the person out."""
+    if not request.user.is_authenticated:
+        return redirect("signin")
+    if request.method == "POST":
+        privacy.withdraw(request.user)
+        logout(request)
+        return render(request, "identity/left.html", {"deleted_account": False})
+    return render(request, "identity/confirm_leave.html", {"delete_account": False})
+
+
+def delete_account(request):
+    if not request.user.is_authenticated:
+        return redirect("signin")
+    if request.method == "POST":
+        privacy.delete_account(request.user)
+        logout(request)
+        return render(request, "identity/left.html", {"deleted_account": True})
+    return render(request, "identity/confirm_leave.html", {"delete_account": True})

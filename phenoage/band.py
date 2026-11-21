@@ -58,23 +58,29 @@ def _parse_float(text):
 
 def read_rows(path):
     """Return a list of (date, {metric: value}) from the CSV."""
-    rows = []
     with open(path, newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        if reader.fieldnames is None:
-            raise ValueError("%s is empty" % path)
-        header = {name.strip().lower(): name for name in reader.fieldnames}
-        if "date" not in header:
-            raise ValueError("%s needs a 'date' column" % path)
-        for line in reader:
-            day = date.fromisoformat(line[header["date"]].strip())
-            values = {}
-            for metric in DAILY_METRICS + ("vo2max",):
-                if metric in header:
-                    values[metric] = _parse_float(line[header[metric]])
-            rows.append((day, values))
+        return parse_rows(f, path)
+
+
+def parse_rows(lines, name="The file"):
+    """Same as read_rows, from an open file or a list of text lines
+    (the web app reads an upload this way, without saving it)."""
+    rows = []
+    reader = csv.DictReader(lines)
+    if reader.fieldnames is None:
+        raise ValueError("%s is empty" % name)
+    header = {name_.strip().lower(): name_ for name_ in reader.fieldnames}
+    if "date" not in header:
+        raise ValueError("%s needs a 'date' column" % name)
+    for line in reader:
+        day = date.fromisoformat(line[header["date"]].strip())
+        values = {}
+        for metric in DAILY_METRICS + ("vo2max",):
+            if metric in header:
+                values[metric] = _parse_float(line[header[metric]])
+        rows.append((day, values))
     if not rows:
-        raise ValueError("%s has no data rows" % path)
+        raise ValueError("%s has no data rows" % name)
     return rows
 
 

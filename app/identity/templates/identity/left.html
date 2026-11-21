@@ -1,0 +1,7 @@
+{% extends "core/base.html" %}{% load i18n %}
+{% block title %}{% translate "Done" %} · VitalAge{% endblock %}
+{% block content %}
+  <h1>{% if deleted_account %}{% translate "Your account is deleted" %}{% else %}{% translate "You have left the study" %}{% endif %}</h1>
+  <p class="lead">{% translate "Your research data has been deleted. Thank you for taking part." %}</p>
+  {% if not deleted_account %}<p class="note">{% translate "If you change your mind, sign in again and agree to the study information." %}</p>{% endif %}
+{% endblock %}

@@ -97,3 +97,16 @@ fieldset.choices .note { margin: 0 0 6px; }
 .topbar form { display: flex; gap: 8px; align-items: center; margin: 0; }
 .linkish { background: none; border: 0; padding: 0; font: inherit; font-size: 14px; color: var(--accent); cursor: pointer; text-decoration: underline; min-height: 32px; }
 .linkish[aria-current="true"] { color: var(--ink); text-decoration: none; font-weight: 600; }
+
+/* Milestone 4: history, band, my data */
+.tabs { display: flex; gap: 4px; margin: -8px 0 20px; overflow-x: auto; border-bottom: 1px solid var(--line); }
+.tabs a { padding: 10px 10px; min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; color: var(--ink-2); font-size: 15px; white-space: nowrap; }
+.tabs a:hover { color: var(--accent); }
+.ok { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border-radius: 8px; padding: 10px 12px; font-size: 14px; margin: 0 0 12px; }
+.btn.danger { background: var(--bad); color: #fff; }
+.btn.secondary.danger { background: transparent; color: var(--bad); border-color: var(--bad); }
+table.history td .range { display: block; }
+.card .actions { margin-top: 14px; }
+input[type=file] { padding: 8px; }
+table.review .range.older { color: var(--older); }
+table.review .range.younger { color: var(--younger); }

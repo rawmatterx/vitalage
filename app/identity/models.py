@@ -57,7 +57,7 @@ class Account(AbstractBaseUser, PermissionsMixin):
 
     @property
     def email(self):
-        return decrypt(self.email_encrypted)
+        return decrypt(self.email_encrypted) if self.email_encrypted else ""
 
     def __str__(self):
         return "%s #%s" % (self.get_role_display(), self.pk)
@@ -190,12 +190,24 @@ class PersonLink(models.Model):
     account = models.OneToOneField(Account, on_delete=models.CASCADE, related_name="link")
     participant_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     birth_date_encrypted = models.TextField()
-    anchor_date_encrypted = models.TextField(blank=True)   # set at the first blood test (milestone 4)
+    anchor_date_encrypted = models.TextField(blank=True)   # set at the first saved blood test
 
     @property
     def birth_date(self):
         from datetime import date
         return date.fromisoformat(decrypt(self.birth_date_encrypted))
+
+    @property
+    def anchor_date(self):
+        """Day 0 for every date in the research store; None before the first test."""
+        from datetime import date
+        if not self.anchor_date_encrypted:
+            return None
+        return date.fromisoformat(decrypt(self.anchor_date_encrypted))
+
+    def set_anchor_date(self, day):
+        self.anchor_date_encrypted = encrypt(day.isoformat())
+        self.save(update_fields=["anchor_date_encrypted"])
 
 
 class AuditLog(models.Model):
