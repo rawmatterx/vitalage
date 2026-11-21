@@ -1,0 +1,8 @@
+# Packages the VitalAge web app needs. Install with:
+#   pip install -r app/requirements.txt
+# The science code (the phenoage package) needs nothing extra.
+Django>=5.2,<5.3          # web framework (5.2 is the long-term support release)
+whitenoise>=6.7,<7        # serves CSS and images in production
+dj-database-url>=2.2,<3   # reads the database address from DATABASE_URL
+gunicorn>=23,<24          # runs the app on the server
+psycopg[binary]>=3.2,<4   # talks to PostgreSQL on the server

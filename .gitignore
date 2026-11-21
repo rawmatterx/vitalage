@@ -4,3 +4,5 @@ __pycache__/
 .venv/
 research/data/
 .venv-research/
+app/db.sqlite3
+app/staticfiles/

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VitalAge</title>
+<style>
+/* Colours match web/vitalage.html so the app feels like the calculator. */
+:root {
+  --bg: #f3f5f6; --surface: #ffffff; --ink: #12181c; --ink-2: #4a565e;
+  --muted: #74828a; --line: #dbe2e5; --accent: #1d6a86; --older: #d2453f;
+  --font-display: "Sora", "Avenir Next", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1416; --surface: #172024; --ink: #e8eef0; --ink-2: #b3c0c6;
+    --muted: #81909a; --line: #2a363b; --accent: #5fb3cf; --older: #e66767;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font-body); }
+main { max-width: 560px; margin: 0 auto; padding: 32px 16px 48px; }
+h1 { font: 600 32px/1.1 var(--font-display); margin: 0 0 8px; }
+h1 span { color: var(--accent); }
+.lead { color: var(--ink-2); margin: 0 0 24px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.card h2 { font: 600 16px/1.3 var(--font-display); margin: 0 0 4px; }
+.card p { margin: 0; color: var(--ink-2); }
+.metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.metric .k { font: 500 11px/1 var(--font-data); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.metric .v { font: 600 28px/1.2 var(--font-display); font-variant-numeric: tabular-nums; }
+.older { color: var(--older); }
+.note { font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Vital<span>Age</span></h1>
+  <p class="lead">The pilot study app is being built. This page checks that the web app and the VitalAge science code work together.</p>
+
+  <section class="card" aria-labelledby="h-check">
+    <h2 id="h-check">Science check: example report</h2>
+    <p>A fixed example blood report for a {{ example.age }}-year-old, run through the same code as the calculator. No personal data is used or saved.</p>
+    <div class="metrics">
+      <div class="metric"><div class="k">Internal age</div><div class="v">{{ example.internal_age }}</div></div>
+      <div class="metric"><div class="k">Vs calendar age</div><div class="v{% if example.gap > 0 %} older{% endif %}">{% if example.gap > 0 %}+{% endif %}{{ example.gap }} yrs</div></div>
+      <div class="metric"><div class="k">PhenoAge</div><div class="v">{{ example.phenoage }}</div></div>
+      <div class="metric"><div class="k">VitalAge version</div><div class="v">{{ version }}</div></div>
+    </div>
+  </section>
+
+  <p class="note">Not a diagnostic tool. Milestone 1 of the MVP plan: sign-in, consent and saving data come in later milestones.</p>
+</main>
+</body>
+</html>
