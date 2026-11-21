@@ -1,16 +1,21 @@
 """Pages of the VitalAge app.
 
-Milestone 1 has one real page. It runs the existing phenoage science code on
-a fixed example report, to prove the web app and the science package are
-wired together. Nothing is saved and no personal data is used.
+Milestone 2: Add report -> Review values -> Results. Nothing is saved: the
+values travel from page to page inside the form itself, and the server
+forgets them once the page is sent. Saving comes in milestone 4, after
+sign-in and consent (milestone 3).
 """
 
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.decorators.http import require_http_methods, require_POST
 
 from phenoage import phenoage
 from phenoage.internal import internal_age
 from phenoage.vitalage import VERSION
+
+from .forms import ReportForm
+from .science import compute, review_rows
 
 # The worked example from the README (age 58), values as printed on an Indian lab report.
 EXAMPLE_AGE = 58
@@ -41,6 +46,47 @@ def example_result():
 
 def home(request):
     return render(request, "core/home.html", {"example": example_result(), "version": VERSION})
+
+
+@require_http_methods(["GET", "POST"])
+def add_report(request):
+    """Screen 5. A POST here comes from "Edit values" on the Review screen and
+    simply puts the values back in the form."""
+    form = ReportForm(request.POST) if request.method == "POST" else ReportForm()
+    if request.method == "POST":
+        form.is_valid()   # show any problems next to the boxes
+    return render(request, "core/add_report.html", {"form": form})
+
+
+@require_POST
+def review(request):
+    """Screen 6: show the values back, as printed, before any result."""
+    form = ReportForm(request.POST)
+    if not form.is_valid():
+        return render(request, "core/add_report.html", {"form": form})
+    data = form.cleaned_data
+    return render(request, "core/review.html", {
+        "form": form,
+        "rows": review_rows(data["report"]),
+        "age": data["age"],
+        "test_date": data["test_date"],
+        "fasting": data["fasting"],
+    })
+
+
+@require_POST
+def result(request):
+    """Screen 7: the results. The values are checked again, never trusted."""
+    form = ReportForm(request.POST)
+    if not form.is_valid():
+        return render(request, "core/add_report.html", {"form": form})
+    data = form.cleaned_data
+    return render(request, "core/result.html", {
+        "form": form,
+        "r": compute(data["age"], data["report"]),
+        "test_date": data["test_date"],
+        "fasting": data["fasting"],
+    })
 
 
 def health(request):

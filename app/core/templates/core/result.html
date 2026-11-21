@@ -1,0 +1,66 @@
+{% extends "core/base.html" %}
+{% load vitalage %}
+{% block title %}Your result · VitalAge{% endblock %}
+{% block content %}
+  <p class="steps">Step 3 of 3</p>
+  <h1>Your result</h1>
+  <p class="lead">From one blood test{% if test_date %} on {{ test_date|date:"j M Y" }}{% endif %}, at age {{ r.age }}. Nothing has been saved.</p>
+
+  {% if r.warnings %}<div class="warn"><ul>{% for w in r.warnings %}<li>{{ w }}</li>{% endfor %}</ul></div>{% endif %}
+
+  {% if r.complete %}
+  <section class="card" aria-labelledby="h-internal">
+    <h2 id="h-internal">Internal age</h2>
+    <p>How old your body looks inside, estimated from your blood. It tracks DNA-methylation aging but is not a DNA test.</p>
+    <div class="metrics">
+      <div class="metric"><div class="k">Internal age</div><div class="v">{{ r.internal_age|one }}</div></div>
+      <div class="metric"><div class="k">Vs calendar age</div>
+        <div class="v {% if r.gap > 0.05 %}older{% elif r.gap < -0.05 %}younger{% endif %}">{{ r.gap|signed }} yrs</div></div>
+      <div class="metric"><div class="k">Pace estimate</div><div class="v">{{ r.pace|two }}</div>
+        <div class="s">biological years per year; typical at your age {{ r.typical_pace|two }}</div></div>
+      <div class="metric"><div class="k">PhenoAge</div><div class="v">{{ r.phenoage|one }}</div>
+        <div class="s">published reference measure</div></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-levers">
+    <h2 id="h-levers">What moves your internal age</h2>
+    <p>Years each marker adds (red) or removes (blue), compared with a typical healthy adult your age.</p>
+    <div class="bars">
+      <div class="bar base">
+        <span>Typical healthy adult</span>
+        <span class="track"><span class="fill {% if r.baseline_gap >= 0 %}up{% else %}down{% endif %}" style="width: {{ r.baseline_width }}%"></span></span>
+        <span class="num">{{ r.baseline_gap|signed }}</span>
+      </div>
+      {% for lever in r.levers %}
+      <div class="bar">
+        <span>{{ lever.label }}</span>
+        <span class="track"><span class="fill {% if lever.years >= 0 %}up{% else %}down{% endif %}" style="width: {{ lever.width }}%"></span></span>
+        <span class="num">{{ lever.years|signed }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  <p class="note">Pace from a single test is noisy: a cold raises CRP and white cells. A pace you can trust needs 3 tests over at least a year, which comes when results can be saved.</p>
+  {% else %}
+  <section class="card" aria-labelledby="h-range">
+    <h2 id="h-range">Internal age, as a range</h2>
+    <p>{{ r.missing|join:", " }} {{ r.missing|length|pluralize:"was,were" }} not entered, so we assumed the usual lab range. Adding {{ r.missing|length|pluralize:"it,them" }} would give one number.</p>
+    <div class="metrics">
+      <div class="metric"><div class="k">Internal age</div><div class="v">{{ r.internal_low|one }} to {{ r.internal_high|one }}</div></div>
+      <div class="metric"><div class="k">Vs calendar age</div><div class="v">{{ r.gap_low|signed }} to {{ r.gap_high|signed }}</div></div>
+      <div class="metric"><div class="k">PhenoAge</div><div class="v">{{ r.phenoage_low|one }} to {{ r.phenoage_high|one }}</div></div>
+    </div>
+  </section>
+  {% endif %}
+
+  <p class="note">VitalAge (beta) combines this with your fitness band. It will appear once band data can be added.</p>
+
+  <div class="actions">
+    <form method="post" action="{% url 'add_report' %}">
+      {% csrf_token %}{% for field in form %}{{ field.as_hidden }}{% endfor %}
+      <button class="btn secondary" type="submit">Edit values</button>
+    </form>
+    <a class="btn secondary" href="{% url 'add_report' %}">Start again with another report</a>
+  </div>
+{% endblock %}

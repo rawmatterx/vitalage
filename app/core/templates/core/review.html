@@ -1,0 +1,44 @@
+{% extends "core/base.html" %}
+{% block title %}Review values · VitalAge{% endblock %}
+{% block content %}
+  <p class="steps">Step 2 of 3</p>
+  <h1>Check your values</h1>
+  <p class="lead">Compare each number and unit with your report. A wrong unit is the most common mistake.</p>
+
+  <section class="card" aria-labelledby="h-about">
+    <h2 id="h-about">About the test</h2>
+    <p>Age {{ age }}{% if test_date %} · tested {{ test_date|date:"j M Y" }}{% endif %} · {% if fasting == "yes" %}fasting{% elif fasting == "no" %}not fasting{% else %}fasting not known{% endif %}</p>
+  </section>
+  {% if fasting != "yes" %}<p class="warn">Glucose from a non-fasting test reads higher, which makes internal age look older. A fasting test gives a fairer result.</p>{% endif %}
+
+  <section class="card" aria-labelledby="h-values">
+    <h2 id="h-values" style="margin-bottom:12px">Values as entered</h2>
+    <table class="review">
+      <thead><tr><th>Marker</th><th>Value</th></tr></thead>
+      <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.label }}{% if not row.missing %}<span class="range">usual {{ row.range }}</span>{% endif %}</td>
+          {% if row.missing %}
+          <td class="missing">not entered</td>
+          {% else %}
+          <td class="num">{{ row.value }} {{ row.unit }}{% if row.flag %}<span class="flag">{{ row.flag }}</span>{% endif %}</td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <p class="note">"High" or "low" only means outside the usual lab range. It is not a diagnosis; ask your doctor about any value that worries you.</p>
+
+  <div class="actions">
+    <form method="post" action="{% url 'result' %}">
+      {% csrf_token %}{% for field in form %}{{ field.as_hidden }}{% endfor %}
+      <button class="btn" type="submit">These are correct, show my result</button>
+    </form>
+    <form method="post" action="{% url 'add_report' %}">
+      {% csrf_token %}{% for field in form %}{{ field.as_hidden }}{% endfor %}
+      <button class="btn secondary" type="submit">Edit values</button>
+    </form>
+  </div>
+{% endblock %}
