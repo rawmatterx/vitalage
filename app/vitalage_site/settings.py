@@ -50,12 +50,19 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "core",
+    "identity",   # who people are and what they agreed to
+    "research",   # health data, keyed by a random participant ID only
 ]
+
+AUTH_USER_MODEL = "identity.Account"
+AUTHENTICATION_BACKENDS = ["identity.backends.EmailBackend"]
+LOGIN_URL = "signin"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -75,6 +82,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.i18n",
             ],
         },
     },
@@ -96,12 +104,48 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# English and Bengali, as decided in the MVP plan. Translations come in milestone 3.
+# English and Bengali, as decided in the MVP plan. Bengali text lives in
+# app/locale/bn/LC_MESSAGES/django.po (see app/README.md, "Translations").
 LANGUAGE_CODE = "en"
 LANGUAGES = [("en", "English"), ("bn", "বাংলা")]
 TIME_ZONE = "Asia/Kolkata"
 USE_I18N = True
 USE_TZ = True
+LOCALE_PATHS = [APP_DIR / "locale"]
+
+# ---- Secrets for personal fields (see identity/crypto.py) ----
+# Any long random string. Keep it secret and backed up: without it the
+# encrypted emails and birth dates cannot be read.
+VITALAGE_FIELD_KEY = os.environ.get("VITALAGE_FIELD_KEY", "")
+if not VITALAGE_FIELD_KEY:
+    if DEBUG:
+        VITALAGE_FIELD_KEY = "dev-only-field-key"
+    else:
+        raise ImproperlyConfigured("Set VITALAGE_FIELD_KEY to a long random string.")
+
+# The app's public address, used in invite links.
+VITALAGE_SITE_URL = os.environ.get("VITALAGE_SITE_URL", "http://127.0.0.1:8000")
+if os.environ.get("RENDER_EXTERNAL_URL") and "VITALAGE_SITE_URL" not in os.environ:
+    VITALAGE_SITE_URL = os.environ["RENDER_EXTERNAL_URL"]
+
+# ---- Email ----
+# With EMAIL_HOST unset (a laptop), emails are printed in the terminal instead
+# of being sent. On the server, set these for your email service. Suggested
+# free default (a guess, not yet chosen): Brevo SMTP, host smtp-relay.brevo.com,
+# port 587, with the SMTP login and key from your Brevo account.
+if os.environ.get("EMAIL_HOST"):
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.environ["EMAIL_HOST"]
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+    EMAIL_USE_TLS = True
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "VitalAge <no-reply@example.com>")
+
+# Sign-in lasts 30 days on a phone, and ends when the browser is told to sign out.
+SESSION_COOKIE_AGE = 30 * 24 * 3600
 
 STATIC_URL = "static/"
 STATIC_ROOT = APP_DIR / "staticfiles"

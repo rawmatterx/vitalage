@@ -1,0 +1,262 @@
+# Bengali screen and email text for VitalAge.
+# DRAFT TRANSLATION: written without native-speaker review. Before real
+# participants, a native speaker reviews and back-translates it.
+# After editing, run: python app/scripts/compile_translations.py
+msgid ""
+msgstr ""
+"Project-Id-Version: VitalAge\n"
+"Language: bn\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "About you"
+msgstr "আপনার সম্পর্কে"
+
+msgid "Add a blood report"
+msgstr "রক্ত পরীক্ষার রিপোর্ট যোগ করুন"
+
+msgid "Add the 9 values from a fasting blood report."
+msgstr "খালি পেটে করা রক্ত পরীক্ষার রিপোর্ট থেকে ৯টি মান লিখুন।"
+
+msgid "Ask for a new code"
+msgstr "নতুন কোড চান"
+
+msgid "Check your email"
+msgstr "আপনার ইমেল দেখুন"
+
+msgid "Consent"
+msgstr "সম্মতি"
+
+msgid "Continue"
+msgstr "এগিয়ে যান"
+
+msgid "Draft wording."
+msgstr "খসড়া লেখা।"
+
+msgid "Email me a code"
+msgstr "আমাকে একটি কোড ইমেল করুন"
+
+msgid "Enter code"
+msgstr "কোড লিখুন"
+
+msgid ""
+"If that address is in the study, we have sent it a 6-digit code. The code "
+"works for 10 minutes."
+msgstr ""
+"ঠিকানাটি গবেষণায় থাকলে আমরা সেখানে একটি ৬ অঙ্কের কোড পাঠিয়েছি। কোডটি ১০ "
+"মিনিট কাজ করবে।"
+
+msgid "In short"
+msgstr "সংক্ষেপে"
+
+msgid ""
+"It may have been used already, or it is more than 7 days old. If you already"
+" joined, sign in with your email. Otherwise ask the study coordinator for a "
+"new link."
+msgstr ""
+"লিঙ্কটি হয়তো আগেই ব্যবহার করা হয়েছে, অথবা এটি ৭ দিনের বেশি পুরনো। আপনি "
+"আগেই যোগ দিয়ে থাকলে ইমেল দিয়ে সাইন ইন করুন। না হলে গবেষণা সমন্বয়কের কাছে "
+"নতুন লিঙ্ক চান।"
+
+msgid "Language"
+msgstr "ভাষা"
+
+msgid "Link not valid"
+msgstr "লিঙ্কটি বৈধ নয়"
+
+msgid "New to the study? Use the personal link in your invite email."
+msgstr "গবেষণায় নতুন? আপনার আমন্ত্রণ ইমেলের ব্যক্তিগত লিঙ্কটি ব্যবহার করুন।"
+
+msgid ""
+"Not a diagnostic tool. Built on US data; not yet validated in Indian adults."
+msgstr ""
+"এটি রোগনির্ণয়ের যন্ত্র নয়। মার্কিন তথ্যের উপর তৈরি; ভারতীয় "
+"প্রাপ্তবয়স্কদের ক্ষেত্রে এখনো যাচাই করা হয়নি।"
+
+msgid "Not ready yet"
+msgstr "এখনো প্রস্তুত নয়"
+
+msgid "Please try again later, or contact the study coordinator."
+msgstr "পরে আবার চেষ্টা করুন, অথবা গবেষণা সমন্বয়কের সঙ্গে যোগাযোগ করুন।"
+
+msgid "Read the full information"
+msgstr "সম্পূর্ণ তথ্য পড়ুন"
+
+msgid "Read the study information and choose whether to take part."
+msgstr "গবেষণার তথ্য পড়ুন এবং অংশ নেবেন কিনা ঠিক করুন।"
+
+msgid "Save and continue"
+msgstr "সংরক্ষণ করে এগিয়ে যান"
+
+msgid "Sign in"
+msgstr "সাইন ইন"
+
+msgid "Sign out"
+msgstr "সাইন আউট"
+
+msgid "Start"
+msgstr "শুরু করুন"
+
+msgid "Step 1 of 4"
+msgstr "ধাপ ১/৪"
+
+msgid "Step 2 of 4"
+msgstr "ধাপ ২/৪"
+
+msgid "Step 3 of 4"
+msgstr "ধাপ ৩/৪"
+
+msgid "Tell us your date of birth, sex and smoking status."
+msgstr "আপনার জন্মতারিখ, লিঙ্গ ও ধূমপানের অবস্থা জানান।"
+
+msgid ""
+"The VitalAge pilot study app. Taking part is by invitation: use the personal"
+" link in your invite email to join."
+msgstr ""
+"VitalAge পাইলট গবেষণার অ্যাপ। অংশগ্রহণ শুধু আমন্ত্রণে: যোগ দিতে আপনার "
+"আমন্ত্রণ ইমেলের ব্যক্তিগত লিঙ্কটি ব্যবহার করুন।"
+
+msgid "The second box is optional. You can withdraw at any time."
+msgstr "দ্বিতীয় বাক্সটি ঐচ্ছিক। আপনি যেকোনো সময় গবেষণা ছেড়ে দিতে পারেন।"
+
+msgid "The study information is not ready yet"
+msgstr "গবেষণার তথ্য এখনো প্রস্তুত নয়"
+
+msgid "This invite link does not work"
+msgstr "এই আমন্ত্রণ লিঙ্কটি কাজ করছে না"
+
+msgid ""
+"This text is not yet approved by an ethics committee. It is for testing "
+"only."
+msgstr "এই লেখা এখনো কোনো এথিক্স কমিটি অনুমোদন করেনি। এটি শুধু পরীক্ষার জন্য।"
+
+msgid ""
+"VitalAge estimates how fast your body is aging from a routine blood test. "
+"This pilot checks whether fitness band data makes that estimate better."
+msgstr ""
+"VitalAge একটি সাধারণ রক্ত পরীক্ষা থেকে অনুমান করে আপনার শরীর কত দ্রুত "
+"বুড়িয়ে যাচ্ছে। এই পাইলট দেখবে, ফিটনেস ব্যান্ডের তথ্য সেই অনুমানকে আরও ভালো"
+" করে কিনা।"
+
+msgid "We will email you a 6-digit code. There is no password."
+msgstr "আমরা আপনাকে একটি ৬ অঙ্কের কোড ইমেল করব। কোনো পাসওয়ার্ড নেই।"
+
+msgid "Welcome"
+msgstr "স্বাগতম"
+
+msgid "What happens next"
+msgstr "এরপর কী হবে"
+
+msgid "You are invited to the VitalAge pilot study"
+msgstr "আপনাকে VitalAge পাইলট গবেষণায় আমন্ত্রণ জানানো হচ্ছে"
+
+msgid ""
+"Your date of birth is kept with your email, apart from your health data. The"
+" research data keeps only the year."
+msgstr ""
+"আপনার জন্মতারিখ আপনার ইমেলের সঙ্গে, স্বাস্থ্য-তথ্য থেকে আলাদা রাখা হয়। "
+"গবেষণা-তথ্যে শুধু জন্মসাল থাকে।"
+
+#, python-format
+msgid "Version %(v)s"
+msgstr "সংস্করণ %(v)s"
+
+msgid "Your email address"
+msgstr "আপনার ইমেল ঠিকানা"
+
+msgid "6-digit code"
+msgstr "৬ অঙ্কের কোড"
+
+msgid "Enter the 6 digits from the email."
+msgstr "ইমেলে পাওয়া ৬টি অঙ্ক লিখুন।"
+
+msgid ""
+"I have read the information above and agree to take part in the VitalAge "
+"pilot study."
+msgstr "আমি উপরের তথ্য পড়েছি এবং VitalAge পাইলট গবেষণায় অংশ নিতে রাজি।"
+
+msgid "You need to agree to this to take part."
+msgstr "অংশ নিতে হলে এতে রাজি হতে হবে।"
+
+msgid ""
+"You may contact me by email about the 12-month follow-up and future studies."
+msgstr ""
+"১২ মাস পরের পরীক্ষা এবং ভবিষ্যতের গবেষণা নিয়ে আমার সঙ্গে ইমেলে যোগাযোগ করা "
+"যাবে।"
+
+msgid "Date of birth"
+msgstr "জন্মতারিখ"
+
+msgid "Sex"
+msgstr "লিঙ্গ"
+
+msgid "Male"
+msgstr "পুরুষ"
+
+msgid "Female"
+msgstr "মহিলা"
+
+msgid "Needed for the fitness reference values."
+msgstr "ফিটনেসের তুলনামূলক মানের জন্য দরকার।"
+
+msgid "Smoking"
+msgstr "ধূমপান"
+
+msgid "Never smoked"
+msgstr "কখনো ধূমপান করিনি"
+
+msgid "Used to smoke"
+msgstr "আগে ধূমপান করতাম"
+
+msgid "Smoke now"
+msgstr "এখন ধূমপান করি"
+
+msgid "You must be 18 or older to take part."
+msgstr "অংশ নিতে আপনার বয়স অন্তত ১৮ হতে হবে।"
+
+msgid "Please check the year."
+msgstr "সালটি আবার দেখুন।"
+
+msgid "That code did not work. Check the latest email, or ask for a new code."
+msgstr "কোডটি কাজ করেনি। সবচেয়ে নতুন ইমেলটি দেখুন, অথবা নতুন কোড চান।"
+
+msgid "Your invitation to the VitalAge pilot study"
+msgstr "VitalAge পাইলট গবেষণায় আপনার আমন্ত্রণ"
+
+#, python-format
+msgid "Your VitalAge sign-in code: %(code)s"
+msgstr "আপনার VitalAge সাইন-ইন কোড: %(code)s"
+
+#, python-format
+msgid ""
+"You have been invited to the VitalAge pilot study.\n"
+"\n"
+"Open this personal link on your phone to read about the study and decide whether to take part:\n"
+"\n"
+"%(link)s\n"
+"\n"
+"The link works once and expires in %(days)d days. Please do not forward it.\n"
+"\n"
+"VitalAge is not a diagnostic tool."
+msgstr ""
+"আপনাকে VitalAge পাইলট গবেষণায় আমন্ত্রণ জানানো হচ্ছে।\n"
+"\n"
+"গবেষণা সম্পর্কে পড়তে এবং অংশ নেবেন কিনা ঠিক করতে আপনার ফোনে এই ব্যক্তিগত লিঙ্কটি খুলুন:\n"
+"\n"
+"%(link)s\n"
+"\n"
+"লিঙ্কটি একবারই কাজ করে এবং %(days)d দিনে মেয়াদ শেষ হয়। দয়া করে এটি কাউকে পাঠাবেন না।\n"
+"\n"
+"VitalAge রোগনির্ণয়ের যন্ত্র নয়।"
+
+#, python-format
+msgid ""
+"Your sign-in code is %(code)s\n"
+"\n"
+"It works for %(minutes)d minutes. If you did not ask for it, you can ignore this email."
+msgstr ""
+"আপনার সাইন-ইন কোড %(code)s\n"
+"\n"
+"এটি %(minutes)d মিনিট কাজ করবে। আপনি না চেয়ে থাকলে এই ইমেলটি উপেক্ষা করতে পারেন।"

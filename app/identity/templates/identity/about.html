@@ -1,0 +1,22 @@
+{% extends "core/base.html" %}{% load i18n %}
+{% block title %}{% translate "About you" %} · VitalAge{% endblock %}
+{% block content %}
+  <p class="steps">{% translate "Step 3 of 4" %}</p>
+  <h1>{% translate "About you" %}</h1>
+  <p class="lead">{% translate "Your date of birth is kept with your email, apart from your health data. The research data keeps only the year." %}</p>
+  <form method="post" class="card" novalidate>{% csrf_token %}
+    <div class="field">
+      <label for="{{ form.birth_date.id_for_label }}">{{ form.birth_date.label }}</label>
+      {{ form.birth_date }}{{ form.birth_date.errors }}
+    </div>
+    {% for field in form %}{% if field.name != "birth_date" %}
+      <fieldset class="field choices">
+        <legend>{{ field.label }}</legend>
+        {% if field.help_text %}<p class="note">{{ field.help_text }}</p>{% endif %}
+        {% for radio in field %}<label class="choice">{{ radio.tag }} {{ radio.choice_label }}</label>{% endfor %}
+        {{ field.errors }}
+      </fieldset>
+    {% endif %}{% endfor %}
+    <div class="actions"><button class="btn" type="submit">{% translate "Save and continue" %}</button></div>
+  </form>
+{% endblock %}

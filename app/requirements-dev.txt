@@ -1,0 +1,2 @@
+# Only needed on a laptop, for editing translations.
+polib==1.2.0

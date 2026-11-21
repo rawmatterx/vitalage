@@ -6,3 +6,4 @@ whitenoise>=6.7,<7        # serves CSS and images in production
 dj-database-url>=2.2,<3   # reads the database address from DATABASE_URL
 gunicorn>=23,<24          # runs the app on the server
 psycopg[binary]>=3.2,<4   # talks to PostgreSQL on the server
+cryptography>=43,<47      # encrypts emails and birth dates in the database

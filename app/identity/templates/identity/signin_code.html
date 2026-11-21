@@ -1,0 +1,14 @@
+{% extends "core/base.html" %}{% load i18n %}
+{% block title %}{% translate "Enter code" %} · VitalAge{% endblock %}
+{% block content %}
+  <h1>{% translate "Check your email" %}</h1>
+  <p class="lead">{% translate "If that address is in the study, we have sent it a 6-digit code. The code works for 10 minutes." %}</p>
+  <form method="post" class="card" novalidate>{% csrf_token %}
+    <div class="field">
+      <label for="{{ form.code.id_for_label }}">{{ form.code.label }}</label>
+      {{ form.code }}{{ form.code.errors }}
+    </div>
+    <div class="actions"><button class="btn" type="submit">{% translate "Sign in" %}</button></div>
+  </form>
+  <p class="note"><a href="{% url 'signin' %}">{% translate "Ask for a new code" %}</a></p>
+{% endblock %}

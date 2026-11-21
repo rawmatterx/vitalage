@@ -1,0 +1,18 @@
+{% extends "core/base.html" %}{% load i18n %}
+{% block title %}{% translate "Welcome" %} · VitalAge{% endblock %}
+{% block content %}
+  <p class="steps">{% translate "Step 1 of 4" %}</p>
+  <h1>{% translate "You are invited to the VitalAge pilot study" %}</h1>
+  <p class="lead">{% translate "VitalAge estimates how fast your body is aging from a routine blood test. This pilot checks whether fitness band data makes that estimate better." %}</p>
+  <section class="card">
+    <h2>{% translate "What happens next" %}</h2>
+    <ol class="plain">
+      <li>{% translate "Read the study information and choose whether to take part." %}</li>
+      <li>{% translate "Tell us your date of birth, sex and smoking status." %}</li>
+      <li>{% translate "Add the 9 values from a fasting blood report." %}</li>
+    </ol>
+  </section>
+  <form method="post">{% csrf_token %}
+    <div class="actions"><button class="btn" type="submit">{% translate "Start" %}</button></div>
+  </form>
+{% endblock %}
