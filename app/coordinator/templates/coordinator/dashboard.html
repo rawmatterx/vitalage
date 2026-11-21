@@ -1,0 +1,55 @@
+{% extends "core/base.html" %}
+{% block title %}Dashboard · VitalAge{% endblock %}
+{% block content %}
+  <h1>Coordinator dashboard</h1>
+  <p class="lead">Study codes and which steps are done. Health values and participants' emails are not shown here.</p>
+
+  <section class="card" aria-labelledby="h-counts">
+    <h2 id="h-counts">The pilot so far</h2>
+    <div class="metrics metrics3">
+      <div class="metric"><div class="k">Invited</div><div class="v">{{ c.invited }}</div><div class="s">{{ c.waiting }} link{{ c.waiting|pluralize }} not used yet</div></div>
+      <div class="metric"><div class="k">Enrolled</div><div class="v">{{ c.enrolled }}</div></div>
+      <div class="metric"><div class="k">First visit done</div><div class="v">{{ c.first_visit_done }}</div></div>
+      <div class="metric"><div class="k">12-month done</div><div class="v">{{ c.repeat_done }}</div></div>
+      <div class="metric"><div class="k">Withdrawn</div><div class="v">{{ c.withdrawn }}</div></div>
+    </div>
+  </section>
+
+  <form method="post" class="card" novalidate>{% csrf_token %}
+    <h2>Invite someone</h2>
+    <div class="row2" style="margin-top:12px">
+      <div class="field"><label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>{{ form.email }}{{ form.email.errors }}</div>
+      <div class="field"><label for="{{ form.language.id_for_label }}">{{ form.language.label }}</label>{{ form.language }}</div>
+    </div>
+    <p class="note">They get a personal link that works once, for 7 days.</p>
+    <div class="actions"><button class="btn" type="submit">Send invite</button></div>
+  </form>
+
+  <section class="card" aria-labelledby="h-people">
+    <h2 id="h-people" style="margin-bottom:12px">Participants</h2>
+    {% if rows %}
+    <table class="review coord">
+      <thead><tr><th>Code</th><th>First visit</th><th>12-month repeat</th></tr></thead>
+      <tbody>{% for r in rows %}
+        <tr>
+          <td class="num">{{ r.code }}</td>
+          {% if r.status %}
+            {% with b=r.status.baseline f=r.status.followup %}
+            <td>{% if b.done %}<span class="tick">Complete</span>{% else %}
+                <span class="{% if b.blood %}tick{% else %}gap{% endif %}">Blood</span>
+                <span class="{% if b.band_ok %}tick{% else %}gap{% endif %}">Band {{ b.band_days }}/30</span>
+                <span class="{% if b.dna %}tick{% else %}gap{% endif %}">DNA</span>{% endif %}</td>
+            <td>{% if f.done %}<span class="tick">Complete</span>{% else %}due {{ r.status.followup_due|date:"M Y" }}{% if f.blood %}<span class="range">blood done</span>{% endif %}{% endif %}</td>
+            {% endwith %}
+          {% else %}
+            <td colspan="2" class="missing">No blood report yet</td>
+          {% endif %}
+        </tr>
+      {% endfor %}</tbody>
+    </table>
+    <p class="note">Codes are the first 8 characters of each person's random study code; the export has the full code.</p>
+    {% else %}
+      <p>Nobody has enrolled yet.</p>
+    {% endif %}
+  </section>
+{% endblock %}

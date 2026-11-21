@@ -430,3 +430,9 @@ msgid "%(n)s DNA test result."
 msgid_plural "%(n)s DNA test results."
 msgstr[0] "%(n)sটি DNA পরীক্ষার ফল।"
 msgstr[1] "%(n)sটি DNA পরীক্ষার ফল।"
+
+msgid "Dashboard"
+msgstr "ড্যাশবোর্ড"
+
+msgid "Export"
+msgstr "এক্সপোর্ট"

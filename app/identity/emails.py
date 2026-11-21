@@ -6,7 +6,9 @@ from django.core.mail import send_mail
 from django.utils import translation
 from django.utils.translation import gettext as _
 
-from .models import CODE_MINUTES, INVITE_DAYS
+from django.urls import reverse
+
+from .models import CODE_MINUTES, INVITE_DAYS, AuditLog, Invite
 
 
 def send_invite(email, link, language="en"):
@@ -20,6 +22,15 @@ def send_invite(email, link, language="en"):
             "VitalAge is not a diagnostic tool."
         ) % {"link": link, "days": INVITE_DAYS}
     send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [email])
+
+
+def invite_person(email, language="en", created_by=None):
+    """Make an invite, email its link, and log it. Returns (invite, link)."""
+    invite, token = Invite.create(email, language=language, created_by=created_by)
+    link = settings.VITALAGE_SITE_URL.rstrip("/") + reverse("welcome", args=[token])
+    send_invite(email, link, language)
+    AuditLog.record(created_by, "invite_created", "invite #%s" % invite.pk)
+    return invite, link
 
 
 def send_code(email, code, language="en"):

@@ -121,3 +121,12 @@ ul.checklist li.done { color: var(--ink); }
 ul.checklist li.done::before { background: var(--accent); border-color: var(--accent); }
 ul.checklist li.done::after { content: ""; position: absolute; left: 8px; top: 12px; width: 5px; height: 9px; border: solid var(--accent-ink); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 .tabs a { padding: 10px 8px; }
+
+/* Milestone 6: coordinator */
+.metrics3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 420px) { .metrics3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+table.coord td span { display: inline-block; font-size: 13px; margin: 0 6px 2px 0; }
+table.coord .tick { color: var(--accent); }
+table.coord .tick::before { content: "✓ "; }
+table.coord .gap { color: var(--muted); }
+table.coord .gap::before { content: "○ "; }

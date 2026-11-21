@@ -1,0 +1,27 @@
+{% extends "core/base.html" %}
+{% block title %}Export · VitalAge{% endblock %}
+{% block content %}
+  <h1>Export for the analyst</h1>
+  <p class="lead">One file with every enrolled participant's research data, in the vitalage-pilot-v1 format that the analysis code reads.</p>
+  <section class="card">
+    <h2>What is in it</h2>
+    <ul class="plain">
+      <li>The random study code, birth year, sex and smoking.</li>
+      <li>Blood markers (in standard units), internal age, PhenoAge and VitalAge for each test.</li>
+      <li>Monthly band medians and the band model; DNA-age results.</li>
+      <li>Every date as days since the person's first blood test.</li>
+    </ul>
+    <p class="note">No names, emails, birth dates or calendar dates. People who withdrew are not in it. Every download is logged.</p>
+    <form method="post">{% csrf_token %}
+      <div class="actions"><button class="btn" type="submit">Download export (JSON)</button></div>
+    </form>
+  </section>
+  <section class="card">
+    <h2 style="margin-bottom:12px">Past downloads</h2>
+    {% if log %}
+    <table class="review"><tbody>{% for e in log %}
+      <tr><td>{{ e.at|date:"j M Y, H:i" }}</td><td class="num">{{ e.target }}</td></tr>
+    {% endfor %}</tbody></table>
+    {% else %}<p>None yet.</p>{% endif %}
+  </section>
+{% endblock %}
