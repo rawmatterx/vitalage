@@ -1,0 +1,26 @@
+# Render "Blueprint": tells render.com how to build and run the VitalAge app.
+# In Render: New > Blueprint > pick this repository. See app/README.md.
+services:
+  - type: web
+    name: vitalage
+    runtime: python
+    plan: free
+    buildCommand: >-
+      pip install -r app/requirements.txt &&
+      python app/manage.py collectstatic --noinput &&
+      python app/manage.py migrate --noinput
+    startCommand: gunicorn --chdir app vitalage_site.wsgi:application
+    healthCheckPath: /health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.1"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vitalage-db
+          property: connectionString
+
+databases:
+  - name: vitalage-db
+    plan: free
