@@ -10,6 +10,7 @@
         <li>{% translate "Your date of birth, kept encrypted and apart from your health data." %}</li>
         <li>{% blocktranslate count n=tests %}{{ n }} blood report.{% plural %}{{ n }} blood reports.{% endblocktranslate %}</li>
         <li>{% blocktranslate count n=months %}{{ n }} month of band data.{% plural %}{{ n }} months of band data.{% endblocktranslate %}</li>
+        <li>{% blocktranslate count n=dna %}{{ n }} DNA test result.{% plural %}{{ n }} DNA test results.{% endblocktranslate %}</li>
       {% endif %}
     </ul>
     {% if link %}<p class="note">{% blocktranslate with code=link.participant_id %}Your study code: {{ code }}{% endblocktranslate %}</p>{% endif %}

@@ -231,17 +231,20 @@ class MyDataTests(TestCase):
             self.client.force_login(who)
             self.client.post(reverse("save_report"), form_data())
             self.client.post(reverse("save_report"), form_data(test_date="2026-11-10"))
-        from research.models import BandMonth
+        from research.models import BandMonth, DnaTest
         for who in (self.account, self.other):
             link = PersonLink.objects.get(account=who)
             BandMonth.objects.create(participant_id=link.participant_id, block=0, day_offset=0,
                                      device_model="Test band", steps=8000, steps_days=30)
+            DnaTest.objects.create(participant_id=link.participant_id, day_offset=5,
+                                   vendor="TruDiagnostic", clock="DunedinPACE", value=0.9)
         self.client.force_login(self.account)
         self.pid = PersonLink.objects.get(account=self.account).participant_id
 
     def research_rows(self, pid):
-        from research.models import BandMonth, BloodMarker, BloodTest, Result
+        from research.models import BandMonth, BloodMarker, BloodTest, DnaTest, Result
         return {
+            "dna_test": DnaTest.objects.filter(participant_id=pid).count(),
             "participant": Participant.objects.filter(pk=pid).count(),
             "blood_test": BloodTest.objects.filter(participant_id=pid).count(),
             "blood_marker": BloodMarker.objects.filter(blood_test__participant_id=pid).count(),
@@ -262,6 +265,7 @@ class MyDataTests(TestCase):
         self.assertEqual([t["date"] for t in data["blood_tests"]], ["2026-11-01", "2026-11-10"])
         self.assertEqual(data["blood_tests"][0]["markers"]["glucose"], {"value": 112, "unit": "mg/dL"})
         self.assertEqual(data["band_months"][0]["from"], "2026-11-01")
+        self.assertEqual(data["dna_tests"][0]["date"], "2026-11-06")
         self.assertTrue(AuditLog.objects.filter(action="data_downloaded").exists())
 
     def test_withdraw_deletes_every_research_row(self):
@@ -308,3 +312,46 @@ class MyDataTests(TestCase):
         self.client.post(reverse("change_recontact"), {"recontact": "on"})
         self.assertTrue(ConsentRecord.has_active(self.account, "recontact"))
         self.assertTrue(ConsentRecord.has_active(self.account))   # study consent untouched
+
+
+class ReminderTests(TestCase):
+    def setUp(self):
+        from core.tests import form_data, make_participant
+        self.account = make_participant()
+        ConsentRecord.objects.create(account=self.account, purpose="recontact",
+                                     consent_version=ConsentVersion.current("en"))
+        self.client.force_login(self.account)
+        self.client.post(reverse("save_report"), form_data(test_date="2025-12-01"))
+        self.form_data = form_data
+
+    def due(self, today):
+        from datetime import date
+        from identity.management.commands.send_reminders import due_for_reminder
+        return due_for_reminder(date.fromisoformat(today))
+
+    def test_due_30_days_before_the_repeat(self):
+        self.assertEqual(self.due("2026-10-31"), [])
+        self.assertEqual([a.pk for a, _d in self.due("2026-11-01")], [self.account.pk])
+
+    def test_sent_once_and_logged(self):
+        from unittest import mock
+        with mock.patch("identity.management.commands.send_reminders.due_for_reminder",
+                        return_value=self.due("2026-11-15")):
+            call_command("send_reminders", stdout=StringIO())
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("12-month", mail.outbox[0].subject)
+        self.assertIn("2026-12-01", mail.outbox[0].body)
+        self.assertEqual(self.due("2026-11-16"), [])
+        self.assertTrue(AuditLog.objects.filter(action="reminder_sent").exists())
+
+    def test_not_sent_without_contact_consent(self):
+        self.client.post(reverse("change_recontact"), {})
+        self.assertEqual(self.due("2026-11-15"), [])
+
+    def test_not_sent_after_the_repeat_is_done(self):
+        self.client.post(reverse("save_report"), self.form_data(test_date="2026-11-10"))
+        self.assertEqual(self.due("2026-11-15"), [])
+
+    def test_not_sent_after_withdrawing(self):
+        self.client.post(reverse("withdraw"))
+        self.assertEqual(self.due("2026-11-15"), [])

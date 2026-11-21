@@ -1,0 +1,18 @@
+{% comment %}The pilot checklist. Needs `pilot` from records.pilot_status.{% endcomment %}
+<section class="card" aria-labelledby="h-pilot">
+  <h2 id="h-pilot">Pilot study checklist</h2>
+  <p>For each visit the study needs a full blood report, 30 days of band data around it, and a DNA-age test within 30 days of it.</p>
+  {% for name, v in pilot.visits %}
+  <h3 class="visit">{{ name }}{% if v.date %} <span>{{ v.date|date:"j M Y" }}</span>{% endif %}</h3>
+  <ul class="checklist">
+    <li class="{% if v.blood %}done{% endif %}">{% if v.blood %}Full blood report{% else %}A blood report with all 9 markers{% endif %}</li>
+    <li class="{% if v.band_ok %}done{% endif %}">Band data: {% if v.band_ok %}enough{% elif v.blood %}{{ v.band_days }} of 30 days{% else %}30 days around the test{% endif %}</li>
+    <li class="{% if v.dna %}done{% endif %}">{% if v.dna %}DNA test: {{ v.dna.clock }} {{ v.dna.value }}{% else %}A DNA-age test within 30 days of the blood test{% endif %}</li>
+  </ul>
+  {% endfor %}
+  {% if pilot.followup_due and not pilot.followup.done %}
+    <p class="note">The 12-month repeat is due around {{ pilot.followup_due|date:"j M Y" }}. Any time from 10 to 14 months after your first test is fine.</p>
+  {% elif pilot.baseline.done and pilot.followup.done %}
+    <p class="ok">Both visits are complete. Thank you!</p>
+  {% endif %}
+</section>

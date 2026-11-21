@@ -220,3 +220,14 @@ class AuditLog(models.Model):
     @classmethod
     def record(cls, actor, action, target=""):
         cls.objects.create(actor=actor, action=action, target=str(target))
+
+
+class Reminder(models.Model):
+    """An email reminder that was sent, so it is never sent twice."""
+    KINDS = [("followup_12m", "12-month repeat")]
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="reminders")
+    kind = models.CharField(max_length=30, choices=KINDS)
+    sent_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = [("account", "kind")]

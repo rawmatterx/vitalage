@@ -9,7 +9,7 @@ the Review screen; the lab file itself never reaches the server.
 import io
 
 from django.contrib import messages
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
@@ -19,10 +19,11 @@ from phenoage import phenoage
 from phenoage.band import parse_rows
 from phenoage.internal import internal_age
 from phenoage.vitalage import VERSION
-from research.models import BloodTest
+from research.models import BloodTest, DnaTest
 
 from . import records
-from .forms import BandForm, ReportForm
+from .forms import BandForm, DnaForm, ReportForm
+from .pdf import summary_pdf
 from .science import compute, review_rows
 
 # The worked example from the README (age 58), values as printed on an Indian lab report.
@@ -116,6 +117,21 @@ def result(request, pk):
 
 
 @participant_required
+def result_pdf(request, pk):
+    """The Results screen as a one-page PDF the person can choose to show a doctor."""
+    try:
+        test = records.get_test(request.user, pk)
+    except BloodTest.DoesNotExist:
+        raise Http404
+    link = records.link_for(request.user)
+    day = records.test_date(link, test)
+    pdf = summary_pdf(compute(test.age, test.report()), day, test.fasting)
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="vitalage-summary-%s.pdf"' % day.isoformat()
+    return response
+
+
+@participant_required
 @require_POST
 def delete_report(request, pk):
     try:
@@ -131,7 +147,39 @@ def delete_report(request, pk):
 @participant_required
 def history(request):
     """Screen 8: every saved test, band months, and pace once it can be trusted."""
-    return render(request, "core/history.html", records.history(request.user))
+    context = records.history(request.user)
+    link = records.link_for(request.user)
+    if link.anchor_date is not None:
+        context["pilot"] = records.pilot_status(link)
+    return render(request, "core/history.html", context)
+
+
+@participant_required
+@require_http_methods(["GET", "POST"])
+def dna(request):
+    """Screen 10: enter a DNA-age result, and see the pilot checklist."""
+    link = records.link_for(request.user)
+    if link.anchor_date is None:
+        return render(request, "core/dna.html", {"needs_blood": True})
+    form = DnaForm(request.POST) if request.method == "POST" else DnaForm()
+    if request.method == "POST" and form.is_valid():
+        records.save_dna(request.user, form.cleaned_data)
+        AuditLog.record(request.user, "dna_saved")
+        messages.success(request, "Your DNA test result is saved.")
+        return redirect("dna")
+    return render(request, "core/dna.html", {"form": form, "tests": records.dna_list(link),
+                                             "pilot": records.pilot_status(link)})
+
+
+@participant_required
+@require_POST
+def delete_dna(request, pk):
+    link = records.link_for(request.user)
+    deleted, _ = DnaTest.objects.filter(pk=pk, participant_id=link.participant_id).delete()
+    if not deleted:
+        raise Http404
+    AuditLog.record(request.user, "dna_deleted")
+    return redirect("dna")
 
 
 @participant_required

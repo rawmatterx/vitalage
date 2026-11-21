@@ -4,13 +4,16 @@ This folder is the web app for the VitalAge pilot study. It is built with
 [Django](https://www.djangoproject.com/), a Python web framework, and it
 reuses the science code in `../phenoage/` unchanged.
 
-**Status: milestone 4 of 6.** People join through a personal email invite,
+**Status: milestone 5 of 6.** People join through a personal email invite,
 sign in with a 6-digit emailed code (no passwords), agree to the consent text
 and fill in About you. They can then save blood reports, see their History
 (internal age per test, VitalAge where band data covers the test, and pace of
 aging once there are 3 full tests over a year), upload fitness band data, and
 on My data download everything, change their contact choice, withdraw, or
-delete their account. Sign-in, consent and My data screens work in English
+delete their account. Milestone 5 adds the DNA test screen, a pilot checklist
+(full blood report, 30 days of band data around it, and a DNA test within 30
+days, for the first visit and the 12-month repeat), a one-page PDF summary on
+each result, and a reminder email for the 12-month repeat. Sign-in, consent and My data screens work in English
 and Bengali; the report, history and band screens are English only so far.
 
 How dates are kept: the first saved blood test's date is the person's
@@ -55,7 +58,8 @@ terminal (the one running `runserver`), and the link is also printed by the
 command. Open the link, press Start, read the consent text, and fill in About
 you. To sign in again later, use **Sign in**: the 6-digit code also appears in
 the runserver terminal. Then pick `examples/sample_lab_report.pdf` to try the
-blood report screens, and `examples/band_sample.csv` on the Band screen.
+blood report screens, `examples/band_sample.csv` on the Band screen, and a
+made-up DunedinPACE value such as 0.92 on the DNA screen.
 
 To use the admin pages (http://127.0.0.1:8000/admin/), make an admin account
 with `python app/manage.py createadmin you@example.com`. Admins use a password;
@@ -86,6 +90,8 @@ python -m unittest                                # science package tests (uncha
 | `core/templates/core/` | The HTML of each page |
 | `core/records.py` | Saves reports and band months; builds History and the My data download |
 | `core/tests.py` | Tests for the report, history and band pages |
+| `core/pdf.py` | The one-page PDF summary of a result (no name or email on it) |
+| `identity/management/commands/send_reminders.py` | The daily 12-month reminder emails |
 | `identity/privacy.py` | Withdraw (deletes every research row) and delete account |
 | `identity/` | The identity store: accounts, invites, sign-in codes, consent, audit log. Emails and birth dates are encrypted |
 | `identity/views.py` | Welcome, Sign in, Consent and About you screens |
@@ -142,6 +148,19 @@ and paste them into `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` and
 `DEFAULT_FROM_EMAIL` in the Render dashboard. Any other service with SMTP
 works the same way: change `EMAIL_HOST` too. Until these are filled in, the
 server writes emails to its log instead of sending them.
+
+## 12-month reminder emails
+
+`python app/manage.py send_reminders` emails everyone whose 12-month repeat is
+due within 30 days, once each. It only emails people who are still in the
+study, ticked "contact me about follow-up", and have not done the repeat yet.
+Add `--dry-run` to only count who is due.
+
+It needs to run once a day. On a laptop you can run it by hand. On Render, a
+Cron Job service can run it daily (`python app/manage.py send_reminders`,
+same environment variables as the web app); as we understand it, cron jobs
+are not on the free plan, so check Render's pricing first. Nobody is due for a
+year after the first participant's first test, so this can wait.
 
 ## Consent text
 

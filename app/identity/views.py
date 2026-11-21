@@ -154,9 +154,11 @@ def my_data(request):
         return redirect("signin")
     link = PersonLink.objects.filter(account=request.user).first()
     tests = records.tests_for(link).count() if link else 0
-    months = link and Participant.objects.get(pk=link.participant_id).band_months.count() or 0
+    participant = link and Participant.objects.get(pk=link.participant_id)
+    months = participant.band_months.count() if link else 0
+    dna = participant.dna_tests.count() if link else 0
     return render(request, "identity/my_data.html", {
-        "link": link, "tests": tests, "months": months,
+        "link": link, "tests": tests, "months": months, "dna": dna,
         "in_study": ConsentRecord.has_active(request.user),
         "recontact": ConsentRecord.has_active(request.user, "recontact"),
     })

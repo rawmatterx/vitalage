@@ -30,3 +30,19 @@ def send_code(email, code, language="en"):
             "It works for %(minutes)d minutes. If you did not ask for it, you can ignore this email."
         ) % {"code": code, "minutes": CODE_MINUTES}
     send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [email])
+
+
+def send_followup_reminder(email, due, link, language="en"):
+    """The 12-month repeat reminder. Only for people who agreed to be contacted."""
+    with translation.override(language):
+        subject = _("Time for your 12-month VitalAge visit")
+        body = _(
+            "Thank you for taking part in the VitalAge pilot study.\n\n"
+            "Your 12-month repeat is due around %(due)s. When you can, please:\n"
+            "1. Have a fasting blood test with the same 9 markers.\n"
+            "2. Upload 30 days of fitness band data from around that test.\n"
+            "3. Take a DNA-age test within 30 days of the blood test.\n\n"
+            "Add them in the app: %(link)s\n\n"
+            "You can stop these emails on the My data page."
+        ) % {"due": due.isoformat(), "link": link}
+    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [email])
