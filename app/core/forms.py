@@ -110,3 +110,39 @@ class BandForm(forms.Form):
         if f.size > BAND_MAX_BYTES:
             raise forms.ValidationError("This file is too big. Export at most a year of daily values.")
         return f
+
+
+# Plausible values per clock: pace clocks are near 1, age clocks are in years.
+PACE_CLOCKS = {"dunedinpace": (0.4, 2.0)}
+AGE_RANGE = (15.0, 120.0)
+
+
+class DnaForm(forms.Form):
+    test_date = forms.DateField(label="Test date (when the sample was taken)",
+                                widget=forms.DateInput(attrs={"type": "date"}))
+    vendor = forms.CharField(label="Test company", max_length=80,
+                             widget=forms.TextInput(attrs={"list": "dna-vendors", "autocomplete": "off"}))
+    clock = forms.CharField(label="Clock name, exactly as on the report", max_length=40,
+                            widget=forms.TextInput(attrs={"list": "dna-clocks", "autocomplete": "off"}))
+    value = forms.FloatField(label="Result",
+                             widget=forms.NumberInput(attrs={"step": "any", "inputmode": "decimal"}))
+
+    def clean_test_date(self):
+        day = self.cleaned_data["test_date"]
+        if day > date.today():
+            raise forms.ValidationError("The test date cannot be in the future.")
+        return day
+
+    def clean(self):
+        data = super().clean()
+        clock, value = data.get("clock"), data.get("value")
+        if clock and value is not None:
+            key = clock.replace(" ", "").lower()
+            low, high = PACE_CLOCKS.get(key, AGE_RANGE)
+            if not low <= value <= high:
+                if key in PACE_CLOCKS:
+                    msg = "%s is usually between 0.6 and 1.4. Check the number." % clock
+                else:
+                    msg = "This looks wrong for an age clock (expected years). Check the number."
+                self.add_error("value", msg)
+        return data

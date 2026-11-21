@@ -20,7 +20,7 @@ from phenoage.internal import MIN_TESTS_FOR_PACE, MIN_YEARS_FOR_PACE, pace_from_
 from phenoage.pilot import BAND_METRICS
 from phenoage.units import to_canonical
 from phenoage.vitalage import VERSION, vitalage
-from research.models import BandMonth, BloodMarker, BloodTest, Participant, Result
+from research.models import BandMonth, BloodMarker, BloodTest, DnaTest, Participant, Result
 
 from .science import compute
 
@@ -178,6 +178,66 @@ def history(account):
     }
 
 
+# ---------- pilot checklist ----------
+
+# From research/PILOT_PROTOCOL.md: at least 30 days of band data around the
+# blood draw, a DNA-age test within 30 days of it, and the same again at 12 months.
+VISIT_WINDOW_DAYS = 30
+BAND_DAYS_NEEDED = 30
+FOLLOWUP_DAYS = 365
+FOLLOWUP_EARLIEST = 300     # a complete test this long after the first one counts as the repeat
+REMIND_DAYS_BEFORE = 30
+
+
+def band_days_around(months, offset):
+    """Days of band data in the 30-day blocks that touch the 30 days either side
+    of `offset`. Approximate: only monthly counts are kept, so a block that
+    partly overlaps the window counts in full."""
+    lo, hi = offset - VISIT_WINDOW_DAYS, offset + VISIT_WINDOW_DAYS
+    return sum(max(m.resting_hr_days, m.steps_days, m.sleep_hours_days)
+               for m in months if m.day_offset <= hi and m.day_offset + 30 > lo)
+
+
+def visit(link, test, months, dnas):
+    if test is None:
+        return {"blood": None, "band_days": 0, "band_ok": False, "dna": None, "done": False}
+    days = band_days_around(months, test.day_offset)
+    dna = next((d for d in dnas if abs(d.day_offset - test.day_offset) <= VISIT_WINDOW_DAYS), None)
+    return {"blood": test, "date": test_date(link, test), "band_days": days,
+            "band_ok": days >= BAND_DAYS_NEEDED, "dna": dna,
+            "done": days >= BAND_DAYS_NEEDED and dna is not None}
+
+
+def pilot_status(link):
+    """The two study visits: the first full blood test and the 12-month repeat."""
+    full = [t for t in tests_for(link) if t.complete]
+    months = list(BandMonth.objects.filter(participant_id=link.participant_id))
+    dnas = list(DnaTest.objects.filter(participant_id=link.participant_id))
+    first = full[0] if full else None
+    repeat = None
+    if first:
+        repeat = next((t for t in full if t.day_offset - first.day_offset >= FOLLOWUP_EARLIEST), None)
+    due = test_date(link, first) + timedelta(days=FOLLOWUP_DAYS) if first else None
+    baseline, followup = visit(link, first, months, dnas), visit(link, repeat, months, dnas)
+    return {"baseline": baseline, "followup": followup, "followup_due": due,
+            "visits": [("First visit", baseline), ("12-month repeat", followup)]}
+
+
+# ---------- DNA tests ----------
+
+def save_dna(account, data):
+    link = link_for(account)
+    return DnaTest.objects.create(
+        participant_id=link.participant_id,
+        day_offset=(data["test_date"] - link.anchor_date).days,
+        vendor=data["vendor"], clock=data["clock"], value=data["value"])
+
+
+def dna_list(link):
+    return [{"test": d, "date": link.anchor_date + timedelta(days=d.day_offset)}
+            for d in DnaTest.objects.filter(participant_id=link.participant_id)]
+
+
 # ---------- my data ----------
 
 def export(account):
@@ -194,7 +254,7 @@ def export(account):
     participant = Participant.objects.get(pk=link.participant_id)
     out.update({"study_code": str(link.participant_id), "birth_date": link.birth_date.isoformat(),
                 "sex": participant.sex, "smoking": participant.smoking,
-                "blood_tests": [], "band_months": []})
+                "blood_tests": [], "band_months": [], "dna_tests": []})
     if link.anchor_date is None:
         return out
     for test in tests_for(link):
@@ -206,6 +266,9 @@ def export(account):
             "internal_age": round(test.result.internal_age, 2),
             "phenoage": round(test.result.phenoage, 2),
             "model_version": test.result.model_version})
+    for d in dna_list(link):
+        out["dna_tests"].append({"date": d["date"].isoformat(), "vendor": d["test"].vendor,
+                                 "clock": d["test"].clock, "value": d["test"].value})
     for month in BandMonth.objects.filter(participant_id=link.participant_id):
         entry = {"from": (link.anchor_date + timedelta(days=month.day_offset)).isoformat(),
                  "device": month.device_model}

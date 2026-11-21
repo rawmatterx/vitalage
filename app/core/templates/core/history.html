@@ -7,6 +7,7 @@
     <p class="lead">No blood reports saved yet. Add your first one to see your internal age.</p>
     <div class="actions"><a class="btn" href="{% url 'add_report' %}">Add a blood report</a></div>
   {% else %}
+  {% if pilot %}{% include "core/_pilot.html" %}{% endif %}
   <section class="card" aria-labelledby="h-pace">
     <h2 id="h-pace">Pace of aging</h2>
     {% if pace %}

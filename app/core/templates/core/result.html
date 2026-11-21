@@ -58,6 +58,7 @@
 
   <div class="actions">
     <a class="btn" href="{% url 'history' %}">See my history</a>
+    <a class="btn secondary" href="{% url 'result_pdf' test.pk %}">Download summary (PDF)</a>
     <a class="btn secondary" href="{% url 'add_report' %}">Add another report</a>
   </div>
   <form method="post" action="{% url 'delete_report' test.pk %}" class="note"

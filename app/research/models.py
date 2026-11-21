@@ -93,3 +93,16 @@ class BandMonth(models.Model):
     class Meta:
         ordering = ["block"]
         unique_together = [("participant", "block")]
+
+
+class DnaTest(models.Model):
+    """One DNA-age result, as reported by the test company."""
+    participant = models.ForeignKey(Participant, on_delete=models.CASCADE,
+                                    related_name="dna_tests")
+    day_offset = models.IntegerField(help_text="Days since the anchor date")
+    vendor = models.CharField(max_length=80)
+    clock = models.CharField(max_length=40, help_text="e.g. DunedinPACE, GrimAge")
+    value = models.FloatField()
+
+    class Meta:
+        ordering = ["day_offset", "id"]

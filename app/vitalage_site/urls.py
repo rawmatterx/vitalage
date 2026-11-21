@@ -21,9 +21,12 @@ urlpatterns = [
     path("report/save/", views.save_report, name="save_report"),
     path("report/<int:pk>/", views.result, name="result"),
     path("report/<int:pk>/delete/", views.delete_report, name="delete_report"),
-    # Screens 8, 9, 11: history, fitness band, my data and privacy
+    path("report/<int:pk>/summary.pdf", views.result_pdf, name="result_pdf"),
+    # Screens 8-11: history, fitness band, DNA test, my data and privacy
     path("history/", views.history, name="history"),
     path("band/", views.band, name="band"),
+    path("dna/", views.dna, name="dna"),
+    path("dna/<int:pk>/delete/", views.delete_dna, name="delete_dna"),
     path("my-data/", identity.my_data, name="my_data"),
     path("my-data/download/", identity.download_my_data, name="download_my_data"),
     path("my-data/recontact/", identity.change_recontact, name="change_recontact"),

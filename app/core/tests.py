@@ -267,3 +267,87 @@ class ReportPagesNeedSignInTests(TestCase):
     def test_without_consent_people_go_to_consent(self):
         self.client.force_login(Account.objects.create_user("new@example.com"))
         self.assertRedirects(self.client.get(reverse("add_report")), reverse("consent"))
+
+
+class DnaAndChecklistTests(ParticipantTestCase):
+    def dna(self, day="2026-11-05", clock="DunedinPACE", value=0.92):
+        return self.client.post(reverse("dna"), {"test_date": day, "vendor": "TruDiagnostic",
+                                                 "clock": clock, "value": value})
+
+    def band(self, csv_text):
+        return self.client.post(reverse("band"), {
+            "file": SimpleUploadedFile("band.csv", csv_text.encode(), content_type="text/csv"),
+            "device_model": "Test band"})
+
+    def band_days(self, start, n):
+        from datetime import timedelta
+        lines = ["date,resting_hr,steps,sleep_hours,vo2max"]
+        for i in range(n):
+            lines.append("%s,62,8000,7.2," % (start + timedelta(days=i)).isoformat())
+        return "\n".join(lines) + "\n"
+
+    def test_needs_a_blood_test_first(self):
+        self.assertContains(self.client.get(reverse("dna")), "Add a blood report first")
+
+    def test_save_and_list(self):
+        from research.models import DnaTest
+        self.client.post(reverse("save_report"), form_data())
+        response = self.dna()
+        self.assertRedirects(response, reverse("dna"))
+        test = DnaTest.objects.get()
+        self.assertEqual((test.day_offset, test.clock, test.value), (4, "DunedinPACE", 0.92))
+        self.assertContains(self.client.get(reverse("dna")), "5 Nov 2026")
+
+    def test_implausible_values_are_refused(self):
+        from research.models import DnaTest
+        self.client.post(reverse("save_report"), form_data())
+        self.assertContains(self.dna(value=58), "usually between 0.6 and 1.4")
+        self.assertContains(self.dna(clock="GrimAge", value=0.9), "expected years")
+        self.assertFalse(DnaTest.objects.exists())
+        self.assertRedirects(self.dna(clock="GrimAge", value=61.2), reverse("dna"))
+
+    def test_checklist_follows_the_protocol(self):
+        self.client.post(reverse("save_report"), form_data())          # 1 Nov 2026
+        response = self.client.get(reverse("history"))
+        self.assertContains(response, "Band data: 0 of 30 days")
+        self.assertContains(response, "The 12-month repeat is due around 1 Nov 2027")
+        self.band(self.band_days(date(2026, 10, 15), 35))
+        self.dna(day="2026-12-20")                                      # 49 days later: too late
+        response = self.client.get(reverse("history"))
+        self.assertContains(response, "Band data: enough")
+        self.assertContains(response, "A DNA-age test within 30 days")
+        self.dna(day="2026-11-20")
+        response = self.client.get(reverse("history"))
+        self.assertContains(response, "DNA test: DunedinPACE 0.92")
+
+    def test_other_people_cannot_delete_a_result(self):
+        from research.models import DnaTest
+        self.client.post(reverse("save_report"), form_data())
+        self.dna()
+        pk = DnaTest.objects.get().pk
+        self.client.force_login(make_participant("other@example.com"))
+        self.assertEqual(self.client.post(reverse("delete_dna", args=[pk])).status_code, 404)
+        self.assertTrue(DnaTest.objects.exists())
+
+
+class PdfSummaryTests(ParticipantTestCase):
+    def test_full_report(self):
+        self.client.post(reverse("save_report"), form_data())
+        test = BloodTest.objects.get()
+        response = self.client.get(reverse("result_pdf", args=[test.pk]))
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn("vitalage-summary-2026-11-01.pdf", response["Content-Disposition"])
+        self.assertTrue(response.content.startswith(b"%PDF"))
+
+    def test_range_report(self):
+        report = dict(EXAMPLE_REPORT)
+        del report["crp"]
+        self.client.post(reverse("save_report"), form_data(report=report))
+        test = BloodTest.objects.get()
+        self.assertTrue(self.client.get(reverse("result_pdf", args=[test.pk])).content.startswith(b"%PDF"))
+
+    def test_nobody_else_can_download_it(self):
+        self.client.post(reverse("save_report"), form_data())
+        test = BloodTest.objects.get()
+        self.client.force_login(make_participant("other@example.com"))
+        self.assertEqual(self.client.get(reverse("result_pdf", args=[test.pk])).status_code, 404)

@@ -1,0 +1,41 @@
+{% extends "core/base.html" %}
+{% block title %}DNA test · VitalAge{% endblock %}
+{% block content %}
+  <h1>DNA-age test</h1>
+  {% if needs_blood %}
+    <p class="lead">Add a blood report first. The DNA test is matched to the date of your blood test.</p>
+    <div class="actions"><a class="btn" href="{% url 'add_report' %}">Add a blood report</a></div>
+  {% else %}
+  <p class="lead">Enter the result from your DNA-age test report. The study needs one taken within 30 days of your blood test.</p>
+
+  {% include "core/_pilot.html" %}
+
+  <form method="post" class="card" novalidate>{% csrf_token %}
+    <h2>Add a result</h2>
+    {% for field in form %}
+      <div class="field"{% if forloop.first %} style="margin-top:12px"{% endif %}>
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}{{ field.errors }}
+      </div>
+    {% endfor %}
+    <datalist id="dna-vendors"><option value="TruDiagnostic"><option value="Tally Health"><option value="Elysium Index"><option value="GenieQ"></datalist>
+    <datalist id="dna-clocks"><option value="DunedinPACE"><option value="GrimAge"><option value="GrimAge2"><option value="PhenoAge (DNAm)"></datalist>
+    <p class="note">DunedinPACE is a pace (about 1.0 is average). GrimAge is in years. If your report shows both, add each one.</p>
+    <div class="actions"><button class="btn" type="submit">Save result</button></div>
+  </form>
+
+  {% if tests %}
+  <section class="card">
+    <h2 style="margin-bottom:12px">Saved results</h2>
+    <table class="review history">
+      <thead><tr><th>Date</th><th>Result</th><th></th></tr></thead>
+      <tbody>{% for d in tests %}
+        <tr><td>{{ d.date|date:"j M Y" }}<span class="range">{{ d.test.vendor }}</span></td>
+          <td class="num">{{ d.test.value }}<span class="range">{{ d.test.clock }}</span></td>
+          <td><form method="post" action="{% url 'delete_dna' d.test.pk %}" onsubmit="return confirm('Delete this result?')">{% csrf_token %}<button class="linkish" type="submit">Delete</button></form></td></tr>
+      {% endfor %}</tbody>
+    </table>
+  </section>
+  {% endif %}
+  {% endif %}
+{% endblock %}
