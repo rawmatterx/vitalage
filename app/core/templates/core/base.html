@@ -1,0 +1,17 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}VitalAge{% endblock %}</title>
+<link rel="stylesheet" href="{% static 'core/app.css' %}">
+{% block head %}{% endblock %}
+</head>
+<body>
+<main>
+  {% block brand %}<a class="brand" href="{% url 'home' %}">Vital<span>Age</span></a>{% endblock %}
+  {% block content %}{% endblock %}
+  <p class="note">Not a diagnostic tool. Built on US data; not yet validated in Indian adults.</p>
+</main>
+</body>
+</html>

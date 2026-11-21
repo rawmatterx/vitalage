@@ -107,7 +107,10 @@ STATIC_URL = "static/"
 STATIC_ROOT = APP_DIR / "staticfiles"
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    # On the server, files get a fingerprint in their name so browsers never use an old copy.
+    # On a laptop (and in tests) plain storage is used, so collectstatic is not needed.
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage" if DEBUG
+                    else "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
 # On a laptop the collected-files folder does not exist yet; that is fine.

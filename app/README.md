@@ -4,9 +4,11 @@ This folder is the web app for the VitalAge pilot study. It is built with
 [Django](https://www.djangoproject.com/), a Python web framework, and it
 reuses the science code in `../phenoage/` unchanged.
 
-**Status: milestone 1 of 6.** One page that runs the science code on a fixed
-example report. No sign-in, consent or saving yet. See the MVP plan for what
-comes next.
+**Status: milestone 2 of 6.** Three screens work: Add a blood report (read a
+PDF or CSV on the device, or type values), Check your values, and Your result
+(internal age, pace estimate, PhenoAge and what moves your internal age).
+Nothing is saved: the values travel inside the form from page to page.
+Sign-in, consent and saving come in milestones 3 and 4.
 
 ## Run it on your laptop
 
@@ -24,7 +26,8 @@ python app/manage.py runserver        # start the app
 
 Open http://127.0.0.1:8000 in your browser. You should see internal age
 **61.8 (+3.8 yrs)** for the example 58-year-old, the same number the README's
-command-line example prints.
+command-line example prints. Then press **Add a blood report** and pick
+`examples/sample_lab_report.pdf` to try the three screens.
 
 Stop the app with Ctrl+C.
 
@@ -44,7 +47,11 @@ python -m unittest                                # science package tests (uncha
 | `vitalage_site/settings.py` | All settings. Secrets come from environment variables, never from the code |
 | `vitalage_site/urls.py` | Which web address shows which page |
 | `core/views.py` | The code behind each page |
-| `core/templates/core/home.html` | The HTML of the home page |
+| `core/forms.py` | The Add report form and its checks |
+| `core/science.py` | Calls the phenoage package and shapes results for the pages |
+| `core/static/core/report-reader.js` | Reads a PDF or CSV in the browser (copied from `web/vitalage.html`; change both together) |
+| `core/static/core/vendor/pdfjs-3.11.174/` | Mozilla's pdf.js (Apache 2.0), served by the app so no outside site sees report use |
+| `core/templates/core/` | The HTML of each page |
 | `core/tests.py` | Tests for the pages |
 
 ## Put it online (Render, free plan)

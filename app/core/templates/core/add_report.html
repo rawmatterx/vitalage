@@ -1,0 +1,69 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Add blood report · VitalAge{% endblock %}
+{% block head %}<script src="{% static 'core/report-reader.js' %}" defer
+  data-pdfjs="{% static 'core/vendor/pdfjs-3.11.174/pdf.min.js' %}"
+  data-pdfjs-worker="{% static 'core/vendor/pdfjs-3.11.174/pdf.worker.min.js' %}"></script>{% endblock %}
+{% block content %}
+  <p class="steps">Step 1 of 3</p>
+  <h1>Add a blood report</h1>
+  <p class="lead">Pick your lab report to fill the boxes, or type the values in. You will check them on the next screen.</p>
+
+  <section class="card" aria-labelledby="h-file">
+    <h2 id="h-file">Read from a file</h2>
+    <label class="picker" for="report-file">
+      <input id="report-file" type="file" accept=".pdf,.csv,.txt,application/pdf,text/csv">
+      <strong>Choose a PDF or CSV</strong>
+      <span>Your file is read on this device and never uploaded.</span>
+    </label>
+    <div id="import-result" hidden aria-live="polite">
+      <p id="import-summary"></p>
+      <ul id="import-list"></ul>
+    </div>
+  </section>
+
+  <form method="post" action="{% url 'review' %}" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="warn" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+
+    <section class="card" aria-labelledby="h-test">
+      <h2 id="h-test">About the test</h2>
+      <div class="field" style="margin-top:12px">
+        <label for="{{ form.age.id_for_label }}">{{ form.age.label }}</label>
+        {{ form.age }}{{ form.age.errors }}
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="{{ form.test_date.id_for_label }}">{{ form.test_date.label }}</label>
+          {{ form.test_date }}{{ form.test_date.errors }}
+        </div>
+        <div class="field">
+          <label for="{{ form.fasting.id_for_label }}">Fasting?</label>
+          {{ form.fasting }}
+        </div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="h-markers">
+      <h2 id="h-markers">The 9 blood markers</h2>
+      <p>Enter them as printed on your report. Up to 3 can be left empty.</p>
+      {% for value, unit in form.marker_fields %}
+      <div class="marker">
+        <div>
+          <label for="{{ value.id_for_label }}">{{ value.label }}</label>
+          {{ value }}
+        </div>
+        <div>
+          <label for="{{ unit.id_for_label }}" class="sr-unit" style="font-weight:400;color:var(--muted);font-size:13px">Unit</label>
+          {{ unit }}
+        </div>
+        {{ value.errors }}
+      </div>
+      {% endfor %}
+    </section>
+
+    <div class="actions">
+      <button class="btn" type="submit">Review values</button>
+    </div>
+  </form>
+{% endblock %}
