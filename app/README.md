@@ -4,7 +4,7 @@ This folder is the web app for the VitalAge pilot study. It is built with
 [Django](https://www.djangoproject.com/), a Python web framework, and it
 reuses the science code in `../phenoage/` unchanged.
 
-**Status: milestone 5 of 6.** People join through a personal email invite,
+**Status: all 6 MVP milestones are built.** People join through a personal email invite,
 sign in with a 6-digit emailed code (no passwords), agree to the consent text
 and fill in About you. They can then save blood reports, see their History
 (internal age per test, VitalAge where band data covers the test, and pace of
@@ -13,7 +13,10 @@ on My data download everything, change their contact choice, withdraw, or
 delete their account. Milestone 5 adds the DNA test screen, a pilot checklist
 (full blood report, 30 days of band data around it, and a DNA test within 30
 days, for the first visit and the 12-month repeat), a one-page PDF summary on
-each result, and a reminder email for the 12-month repeat. Sign-in, consent and My data screens work in English
+each result, and a reminder email for the 12-month repeat. Milestone 6 adds
+the coordinator dashboard (invite people, see counts and which steps each
+study code has done, with no health values or participants' emails) and the
+de-identified export for the analyst. Sign-in, consent and My data screens work in English
 and Bengali; the report, history and band screens are English only so far.
 
 How dates are kept: the first saved blood test's date is the person's
@@ -61,6 +64,10 @@ the runserver terminal. Then pick `examples/sample_lab_report.pdf` to try the
 blood report screens, `examples/band_sample.csv` on the Band screen, and a
 made-up DunedinPACE value such as 0.92 on the DNA screen.
 
+To see the coordinator dashboard (http://127.0.0.1:8000/coordinator/), make
+yourself the coordinator with `python app/manage.py createcoordinator you@example.com`,
+then sign in with that email (the code appears in the runserver terminal).
+
 To use the admin pages (http://127.0.0.1:8000/admin/), make an admin account
 with `python app/manage.py createadmin you@example.com`. Admins use a password;
 participants never do.
@@ -70,7 +77,7 @@ Stop the app with Ctrl+C.
 ## Run the tests
 
 ```bash
-DJANGO_DEBUG=1 python app/manage.py test identity core   # web app tests
+DJANGO_DEBUG=1 python app/manage.py test identity core coordinator   # web app tests
 python -m unittest                                # science package tests (unchanged)
 ```
 
@@ -92,6 +99,9 @@ python -m unittest                                # science package tests (uncha
 | `core/tests.py` | Tests for the report, history and band pages |
 | `core/pdf.py` | The one-page PDF summary of a result (no name or email on it) |
 | `identity/management/commands/send_reminders.py` | The daily 12-month reminder emails |
+| `coordinator/` | Screens 12 and 13: the dashboard and the export |
+| `coordinator/export.py` | Builds the export in the vitalage-pilot-v1 format (one record per participant, as `python -m phenoage.pilot` makes) |
+| `identity/management/commands/createcoordinator.py` | Makes an account the study coordinator |
 | `identity/privacy.py` | Withdraw (deletes every research row) and delete account |
 | `identity/` | The identity store: accounts, invites, sign-in codes, consent, audit log. Emails and birth dates are encrypted |
 | `identity/views.py` | Welcome, Sign in, Consent and About you screens |
@@ -161,6 +171,21 @@ Cron Job service can run it daily (`python app/manage.py send_reminders`,
 same environment variables as the web app); as we understand it, cron jobs
 are not on the free plan, so check Render's pricing first. Nobody is due for a
 year after the first participant's first test, so this can wait.
+
+## The export for the analyst
+
+On **Export**, the coordinator downloads one JSON file: a list with one
+vitalage-pilot-v1 record per enrolled participant, the same shape
+`python -m phenoage.pilot` writes, so the analysis code reads it unchanged.
+It has the random study code, birth year, sex, smoking, band model, blood
+markers in standard units, monthly band medians, DNA results and the VitalAge
+outputs; every date is days since the first blood test. No names, emails,
+birth dates or calendar dates. People who withdrew are not in it. Every
+download is written to the audit log.
+
+Two small differences from the command-line tool, because the app keeps only
+monthly band medians: VitalAge for a test uses the band month that contains
+the test, and band blocks are counted from the person's first saved test.
 
 ## Consent text
 

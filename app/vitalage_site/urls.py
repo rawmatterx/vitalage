@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 from core import views
+from coordinator import views as coordinator
 from identity import views as identity
 
 urlpatterns = [
@@ -32,6 +33,9 @@ urlpatterns = [
     path("my-data/recontact/", identity.change_recontact, name="change_recontact"),
     path("my-data/withdraw/", identity.withdraw, name="withdraw"),
     path("my-data/delete/", identity.delete_account, name="delete_account"),
+    # Screens 12-13: coordinator dashboard and export
+    path("coordinator/", coordinator.dashboard, name="dashboard"),
+    path("coordinator/export/", coordinator.export, name="export"),
     # Language picker (English / Bengali)
     path("i18n/", include("django.conf.urls.i18n")),
     path("health/", views.health, name="health"),

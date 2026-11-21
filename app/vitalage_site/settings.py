@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "core",
     "identity",   # who people are and what they agreed to
     "research",   # health data, keyed by a random participant ID only
+    "coordinator",   # dashboard and export for the study coordinator
 ]
 
 AUTH_USER_MODEL = "identity.Account"
