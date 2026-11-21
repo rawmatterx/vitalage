@@ -4,11 +4,21 @@ This folder is the web app for the VitalAge pilot study. It is built with
 [Django](https://www.djangoproject.com/), a Python web framework, and it
 reuses the science code in `../phenoage/` unchanged.
 
-**Status: milestone 3 of 6.** People join through a personal email invite,
-sign in with a 6-digit emailed code (no passwords), read the consent text and
-tick two separate boxes, then fill in About you. Only then can they open the
-blood report screens from milestone 2. Screens and emails work in English and
-Bengali. Blood values are still not saved; saving comes in milestone 4.
+**Status: milestone 4 of 6.** People join through a personal email invite,
+sign in with a 6-digit emailed code (no passwords), agree to the consent text
+and fill in About you. They can then save blood reports, see their History
+(internal age per test, VitalAge where band data covers the test, and pace of
+aging once there are 3 full tests over a year), upload fitness band data, and
+on My data download everything, change their contact choice, withdraw, or
+delete their account. Sign-in, consent and My data screens work in English
+and Bengali; the report, history and band screens are English only so far.
+
+How dates are kept: the first saved blood test's date is the person's
+"anchor", stored encrypted with their identity. The research store saves
+every date as days since that anchor, so it never holds a calendar date. Band
+uploads are read on the server and only 30-day medians are kept; the daily
+values and the file are not stored. The lab PDF is still read on the phone
+and never uploaded.
 
 **Before real participants:** the consent text and all Bengali text are
 drafts. The ethics committee approves the English; a native speaker reviews
@@ -45,7 +55,7 @@ terminal (the one running `runserver`), and the link is also printed by the
 command. Open the link, press Start, read the consent text, and fill in About
 you. To sign in again later, use **Sign in**: the 6-digit code also appears in
 the runserver terminal. Then pick `examples/sample_lab_report.pdf` to try the
-blood report screens.
+blood report screens, and `examples/band_sample.csv` on the Band screen.
 
 To use the admin pages (http://127.0.0.1:8000/admin/), make an admin account
 with `python app/manage.py createadmin you@example.com`. Admins use a password;
@@ -74,12 +84,14 @@ python -m unittest                                # science package tests (uncha
 | `core/static/core/report-reader.js` | Reads a PDF or CSV in the browser (copied from `web/vitalage.html`; change both together) |
 | `core/static/core/vendor/pdfjs-3.11.174/` | Mozilla's pdf.js (Apache 2.0), served by the app so no outside site sees report use |
 | `core/templates/core/` | The HTML of each page |
-| `core/tests.py` | Tests for the report pages |
+| `core/records.py` | Saves reports and band months; builds History and the My data download |
+| `core/tests.py` | Tests for the report, history and band pages |
+| `identity/privacy.py` | Withdraw (deletes every research row) and delete account |
 | `identity/` | The identity store: accounts, invites, sign-in codes, consent, audit log. Emails and birth dates are encrypted |
 | `identity/views.py` | Welcome, Sign in, Consent and About you screens |
 | `identity/management/commands/` | `invite` and `createadmin` commands |
 | `identity/migrations/0002_draft_consent_text.py` | The first DRAFT consent text, English and Bengali |
-| `research/` | The research store. People appear only as a random code, with birth year (no full dates), sex and smoking |
+| `research/` | The research store. People appear only as a random code, with birth year, sex, smoking, blood tests, markers, results and monthly band medians. Dates are days since the anchor |
 | `locale/bn/LC_MESSAGES/django.po` | Bengali screen and email text (draft translation) |
 | `scripts/compile_translations.py` | Turns the `.po` file into the `.mo` file Django reads |
 
@@ -98,7 +110,7 @@ Things to know about the free plan:
 - The app goes to sleep after about 15 minutes without visitors, so the first
   page after a break takes up to a minute to load.
 - The free database is deleted after about 30 days. That is fine now, since
-  no real participant data is in it yet. Move to a paid database (about 7 US dollars a month)
+  no real participant data should be in it yet. Move to a paid database (about 7 US dollars a month)
   before any real participant data goes in.
 - The server is outside India. Ask the ethics committee whether that is
   acceptable before the pilot starts (see the MVP plan's privacy checklist).

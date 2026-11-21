@@ -1,0 +1,22 @@
+{% extends "core/base.html" %}{% load i18n %}
+{% block title %}{% if delete_account %}{% translate "Delete my account" %}{% else %}{% translate "Withdraw from the study" %}{% endif %} · VitalAge{% endblock %}
+{% block content %}
+  <h1>{% if delete_account %}{% translate "Delete your account?" %}{% else %}{% translate "Withdraw from the study?" %}{% endif %}</h1>
+  <section class="card">
+    <h2>{% translate "What happens" %}</h2>
+    <ul class="plain">
+      <li>{% translate "All your blood, band and other research data is deleted now." %}</li>
+      <li>{% translate "The link between your account and your study code is removed for good." %}</li>
+      <li>{% translate "A record that you agreed and then withdrew is kept, with no health data in it." %}</li>
+      <li>{% translate "Results already published from the whole group cannot be changed." %}</li>
+      {% if delete_account %}<li>{% translate "Your email address is deleted and you cannot sign in again." %}</li>{% endif %}
+    </ul>
+    <p class="note">{% translate "This cannot be undone. You may want to download your data first." %}</p>
+  </section>
+  <form method="post">{% csrf_token %}
+    <div class="actions">
+      <button class="btn danger" type="submit">{% if delete_account %}{% translate "Yes, delete my account" %}{% else %}{% translate "Yes, withdraw and delete my data" %}{% endif %}</button>
+      <a class="btn secondary" href="{% url 'my_data' %}">{% translate "No, go back" %}</a>
+    </div>
+  </form>
+{% endblock %}

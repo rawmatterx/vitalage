@@ -27,4 +27,4 @@ def next_step(account):
         return "consent"
     if not PersonLink.objects.filter(account=account).exists():
         return "about"
-    return "add_report"
+    return "history"

@@ -1,0 +1,37 @@
+{% extends "core/base.html" %}{% load i18n %}
+{% block title %}{% translate "My data and privacy" %} · VitalAge{% endblock %}
+{% block content %}
+  <h1>{% translate "My data and privacy" %}</h1>
+  <section class="card">
+    <h2>{% translate "What we hold about you" %}</h2>
+    <ul class="plain">
+      <li>{% translate "Your email address, kept encrypted." %}</li>
+      {% if link %}
+        <li>{% translate "Your date of birth, kept encrypted and apart from your health data." %}</li>
+        <li>{% blocktranslate count n=tests %}{{ n }} blood report.{% plural %}{{ n }} blood reports.{% endblocktranslate %}</li>
+        <li>{% blocktranslate count n=months %}{{ n }} month of band data.{% plural %}{{ n }} months of band data.{% endblocktranslate %}</li>
+      {% endif %}
+    </ul>
+    {% if link %}<p class="note">{% blocktranslate with code=link.participant_id %}Your study code: {{ code }}{% endblocktranslate %}</p>{% endif %}
+    <div class="actions"><a class="btn secondary" href="{% url 'download_my_data' %}">{% translate "Download my data" %}</a></div>
+  </section>
+
+  <form method="post" action="{% url 'change_recontact' %}" class="card">{% csrf_token %}
+    <h2>{% translate "Your choices" %}</h2>
+    <div class="field check" style="margin-top:12px">
+      <label><input type="checkbox" name="recontact"{% if recontact %} checked{% endif %}>
+        <span>{% translate "You may contact me by email about the 12-month follow-up and future studies." %}</span></label>
+    </div>
+    <div class="actions"><button class="btn secondary" type="submit">{% translate "Save my choice" %}</button></div>
+  </form>
+
+  <section class="card">
+    <h2>{% translate "Leave the study" %}</h2>
+    {% if in_study %}
+      <p>{% translate "Withdrawing deletes your blood, band and other research data. You can do it at any time without giving a reason." %}</p>
+      <div class="actions"><a class="btn secondary" href="{% url 'withdraw' %}">{% translate "Withdraw from the study" %}</a></div>
+    {% endif %}
+    <p style="margin-top:12px">{% translate "Deleting your account also removes your email address, and you will not be able to sign in again." %}</p>
+    <div class="actions"><a class="btn secondary danger" href="{% url 'delete_account' %}">{% translate "Delete my account" %}</a></div>
+  </section>
+{% endblock %}

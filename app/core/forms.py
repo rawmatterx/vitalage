@@ -1,10 +1,16 @@
-"""The Add report form: age, test date, fasting, and the 9 markers.
+"""The Add report form: test date, fasting, and the 9 markers.
 
 Each marker has a value box (v_<marker>) and a unit list (u_<marker>).
-Nothing here is saved; the form only checks the values.
+Age on the test day comes from the birth date the person gave on About you,
+so it is not asked again. The form only checks the values; saving happens in
+records.py once the person confirms them.
 """
 
+from datetime import date
+
 from django import forms
+
+from phenoage.history import age_on
 
 from phenoage.core import MARKERS
 from phenoage.partial import MAX_MISSING
@@ -15,15 +21,24 @@ from .science import MARKER_INFO
 FASTING_CHOICES = [("yes", "Yes, fasting"), ("no", "No"), ("unknown", "Not sure")]
 
 
+SOURCE_CHOICES = [("typed", "Typed"), ("pdf", "PDF"), ("csv", "CSV")]
+
+
 class ReportForm(forms.Form):
-    age = forms.IntegerField(label="Your age on the test day", min_value=18, max_value=100)
-    test_date = forms.DateField(label="Test date", required=False,
-                                widget=forms.DateInput(attrs={"type": "date"}))
+    test_date = forms.DateField(label="Test date",
+                                widget=forms.DateInput(attrs={"type": "date"}),
+                                error_messages={"required": "Enter the date of the blood test. "
+                                                            "It is printed on the report."})
     fasting = forms.ChoiceField(label="Fasting when the blood was taken?",
                                 choices=FASTING_CHOICES, initial="yes")
+    # Set by the page's script when values came from a file; never the file itself.
+    source = forms.ChoiceField(choices=SOURCE_CHOICES, required=False, initial="typed",
+                               widget=forms.HiddenInput)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, born, **kwargs):
+        """born: the person's birth date, from the identity store."""
         super().__init__(*args, **kwargs)
+        self.born = born
         for m in MARKERS:
             name, units = MARKER_INFO[m]
             self.fields["v_" + m] = forms.FloatField(
@@ -38,8 +53,19 @@ class ReportForm(forms.Form):
         """(value field, unit field) pairs, for the template."""
         return [(self["v_" + m], self["u_" + m]) for m in MARKERS]
 
+    def clean_test_date(self):
+        day = self.cleaned_data["test_date"]
+        if day > date.today():
+            raise forms.ValidationError("The test date cannot be in the future.")
+        if age_on(self.born, day) < 18:
+            raise forms.ValidationError("Check the year: this is before you turned 18.")
+        return day
+
     def clean(self):
         data = super().clean()
+        if data.get("test_date"):
+            data["age"] = round(age_on(self.born, data["test_date"]), 1)
+        data["source"] = data.get("source") or "typed"
         report = {}
         for m in MARKERS:
             value = data.get("v_" + m)
@@ -65,3 +91,22 @@ class ReportForm(forms.Form):
                 "the result would be too uncertain." % (len(MARKERS) - MAX_MISSING, MAX_MISSING))
         data["report"] = report
         return data
+
+
+BAND_MAX_BYTES = 2_000_000
+
+
+class BandForm(forms.Form):
+    file = forms.FileField(label="Band data (CSV)",
+                           help_text="Columns: date, resting_hr, steps, sleep_hours, vo2max. "
+                                     "Any column can be blank.",
+                           widget=forms.ClearableFileInput(attrs={"accept": ".csv,text/csv"}))
+    device_model = forms.CharField(label="Band brand and model", max_length=80,
+                                   widget=forms.TextInput(attrs={"list": "band-models",
+                                                                 "autocomplete": "off"}))
+
+    def clean_file(self):
+        f = self.cleaned_data["file"]
+        if f.size > BAND_MAX_BYTES:
+            raise forms.ValidationError("This file is too big. Export at most a year of daily values.")
+        return f

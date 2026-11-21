@@ -3,6 +3,7 @@
     DJANGO_DEBUG=1 python app/manage.py test identity
 """
 
+import json
 import re
 from datetime import timedelta
 from io import StringIO
@@ -215,3 +216,95 @@ class TranslationTests(TestCase):
         for path in [app / "identity/forms.py"]:
             found |= set(re.findall(r'_\("([^"]+)"\)', path.read_text()))
         self.assertEqual(found - done, set())
+
+
+class MyDataTests(TestCase):
+    """Screen 11. Withdrawal must delete every research row, and only this person's."""
+
+    def setUp(self):
+        from datetime import date as d
+        from core.tests import BORN, form_data, make_participant
+        self.form_data = form_data
+        self.account = make_participant()
+        self.other = make_participant("other@example.com")
+        for who in (self.account, self.other):
+            self.client.force_login(who)
+            self.client.post(reverse("save_report"), form_data())
+            self.client.post(reverse("save_report"), form_data(test_date="2026-11-10"))
+        from research.models import BandMonth
+        for who in (self.account, self.other):
+            link = PersonLink.objects.get(account=who)
+            BandMonth.objects.create(participant_id=link.participant_id, block=0, day_offset=0,
+                                     device_model="Test band", steps=8000, steps_days=30)
+        self.client.force_login(self.account)
+        self.pid = PersonLink.objects.get(account=self.account).participant_id
+
+    def research_rows(self, pid):
+        from research.models import BandMonth, BloodMarker, BloodTest, Result
+        return {
+            "participant": Participant.objects.filter(pk=pid).count(),
+            "blood_test": BloodTest.objects.filter(participant_id=pid).count(),
+            "blood_marker": BloodMarker.objects.filter(blood_test__participant_id=pid).count(),
+            "result": Result.objects.filter(blood_test__participant_id=pid).count(),
+            "band_month": BandMonth.objects.filter(participant_id=pid).count(),
+        }
+
+    def test_page_shows_counts(self):
+        response = self.client.get(reverse("my_data"))
+        self.assertContains(response, "2 blood reports.")
+        self.assertContains(response, "1 month of band data.")
+
+    def test_download_has_real_dates_and_values(self):
+        response = self.client.get(reverse("download_my_data"))
+        self.assertEqual(response["Content-Type"], "application/json; charset=utf-8")
+        data = json.loads(response.content)
+        self.assertEqual(data["email"], "p@example.com")
+        self.assertEqual([t["date"] for t in data["blood_tests"]], ["2026-11-01", "2026-11-10"])
+        self.assertEqual(data["blood_tests"][0]["markers"]["glucose"], {"value": 112, "unit": "mg/dL"})
+        self.assertEqual(data["band_months"][0]["from"], "2026-11-01")
+        self.assertTrue(AuditLog.objects.filter(action="data_downloaded").exists())
+
+    def test_withdraw_deletes_every_research_row(self):
+        other_pid = PersonLink.objects.get(account=self.other).participant_id
+        before_other = self.research_rows(other_pid)
+        self.assertTrue(all(self.research_rows(self.pid).values()))
+
+        self.assertContains(self.client.get(reverse("withdraw")), "cannot be undone")
+        response = self.client.post(reverse("withdraw"))
+        self.assertContains(response, "You have left the study")
+
+        self.assertEqual(set(self.research_rows(self.pid).values()), {0})
+        self.assertFalse(PersonLink.objects.filter(account=self.account).exists())
+        self.assertEqual(self.research_rows(other_pid), before_other)   # nobody else touched
+        records = ConsentRecord.objects.filter(account=self.account)
+        self.assertTrue(records.exists())
+        self.assertFalse(records.filter(withdrawn_at__isnull=True).exists())
+        self.assertTrue(AuditLog.objects.filter(action="withdrawn", actor=self.account).exists())
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_after_withdrawing_signing_in_asks_for_consent_again(self):
+        self.client.post(reverse("withdraw"))
+        self.client.force_login(self.account)
+        self.assertRedirects(self.client.get(reverse("history")), reverse("consent"))
+
+    def test_delete_account_removes_the_email(self):
+        Invite.create("p@example.com")
+        self.client.post(reverse("delete_account"))
+        self.account.refresh_from_db()
+        self.assertFalse(self.account.is_active)
+        self.assertEqual(self.account.email, "")
+        self.assertIsNone(Account.objects.for_email("p@example.com"))
+        self.assertFalse(Invite.objects.filter(email_hash=self.account.email_hash).exists())
+        self.assertEqual(Invite.objects.count(), 0)
+        self.assertEqual(set(self.research_rows(self.pid).values()), {0})
+        with connection.cursor() as cursor:
+            for table in ("identity_account", "identity_invite"):
+                cursor.execute("SELECT * FROM %s" % table)
+                self.assertNotIn("p@example.com", str(cursor.fetchall()))
+
+    def test_recontact_can_be_turned_off_and_on(self):
+        self.client.post(reverse("change_recontact"), {})
+        self.assertFalse(ConsentRecord.has_active(self.account, "recontact"))
+        self.client.post(reverse("change_recontact"), {"recontact": "on"})
+        self.assertTrue(ConsentRecord.has_active(self.account, "recontact"))
+        self.assertTrue(ConsentRecord.has_active(self.account))   # study consent untouched

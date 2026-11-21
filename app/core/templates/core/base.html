@@ -18,6 +18,15 @@
       <button class="linkish" name="language" value="bn" lang="bn"{% if LANG == "bn" %} aria-current="true"{% endif %}>বাংলা</button>
     </form>
   </div>
+  {% if user.is_authenticated and user.is_active %}
+    <nav class="tabs" aria-label="{% translate 'Main' %}">
+      <a href="{% url 'history' %}">{% translate "History" %}</a>
+      <a href="{% url 'add_report' %}">{% translate "Add report" %}</a>
+      <a href="{% url 'band' %}">{% translate "Band" %}</a>
+      <a href="{% url 'my_data' %}">{% translate "My data" %}</a>
+    </nav>
+  {% endif %}
+  {% if messages %}{% for m in messages %}<p class="ok" role="status">{{ m }}</p>{% endfor %}{% endif %}
   {% block content %}{% endblock %}
   {% if user.is_authenticated %}
     <form action="{% url 'signout' %}" method="post" class="note">{% csrf_token %}

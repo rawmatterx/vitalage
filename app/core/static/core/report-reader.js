@@ -297,7 +297,7 @@
       if (hit.guessed) notes.push(m + ": no unit printed, assumed " + hit.unit + ". Please check.");
       if (hit.belowLimit) notes.push(m + ": the report says below " + hit.value + "; the limit was used.");
     });
-    if (result.patient && result.patient.age && !$("id_age").value) $("id_age").value = result.patient.age;
+    if (result.patient && result.patient.age && $("id_age") && !$("id_age").value) $("id_age").value = result.patient.age;
     if (result.date && !$("id_test_date").value) $("id_test_date").value = result.date;
     if (result.found.glucose && result.found.glucose.fasting) $("id_fasting").value = "yes";
     var n = MARKERS.length - result.missing.length;
@@ -315,7 +315,11 @@
     reader.onload = function () {
       var work = isPdf ? pdfToText(reader.result).then(parseReportText)
                        : Promise.resolve(bloodFromCsv(reader.result));
-      work.then(apply).catch(function (e) {
+      work.then(function (result) {
+        apply(result);
+        // Tell the server only how the values were entered, never the file.
+        if ($("id_source")) $("id_source").value = isPdf ? "pdf" : "csv";
+      }).catch(function (e) {
         showStatus("Could not read this file.", [e.message || String(e),
           "Scanned photos of reports cannot be read. Please type the values in."], true);
       });

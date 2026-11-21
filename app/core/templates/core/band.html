@@ -1,0 +1,53 @@
+{% extends "core/base.html" %}
+{% load vitalage %}
+{% block title %}Fitness band · VitalAge{% endblock %}
+{% block content %}
+  <h1>Fitness band</h1>
+  {% if needs_blood %}
+    <p class="lead">Add a blood report first. Band data is lined up with the date of your first blood test.</p>
+    <div class="actions"><a class="btn" href="{% url 'add_report' %}">Add a blood report</a></div>
+  {% else %}
+  <p class="lead">Upload daily values exported from your band app. We keep only the 30-day medians; the daily values and the file are not stored.</p>
+
+  {% if fitness %}
+  <section class="card" aria-labelledby="h-fit">
+    <h2 id="h-fit">Saved. Your last 30 days</h2>
+    <p>{{ summary.start|date:"j M" }} to {{ summary.end|date:"j M Y" }}, from {{ saved_days }} days in the file.</p>
+    <div class="metrics">
+      <div class="metric"><div class="k">Fitness Age</div><div class="v">{{ fitness.fitness_age|one }}</div></div>
+      <div class="metric"><div class="k">Vs calendar age</div>
+        <div class="v {% if fitness.difference > 0.05 %}older{% elif fitness.difference < -0.05 %}younger{% endif %}">{{ fitness.difference|signed }} yrs</div></div>
+    </div>
+    <table class="review" style="margin-top:16px">
+      <thead><tr><th>Measure</th><th>Years</th></tr></thead>
+      <tbody>{% for c in fitness.components %}
+        <tr><td>{{ c.metric|metric_label }}<span class="range">{{ c.value|one }}</span></td><td class="num">{{ c.years|signed }}</td></tr>
+      {% endfor %}</tbody>
+    </table>
+    {% if summary.notes %}<div class="warn" style="margin-top:12px"><ul>{% for n in summary.notes %}<li>{{ n }}</li>{% endfor %}</ul></div>{% endif %}
+    <div class="actions"><a class="btn" href="{% url 'history' %}">See my history</a></div>
+  </section>
+  {% elif summary %}
+  <p class="warn">Saved, but the last 30 days do not have enough valid days for a Fitness Age.{% for n in summary.notes %} {{ n }}{% endfor %}</p>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="card" novalidate>{% csrf_token %}
+    <div class="field">
+      <label for="{{ form.file.id_for_label }}">{{ form.file.label }}</label>
+      {{ form.file }}
+      <p class="note">{{ form.file.help_text }}</p>
+      {{ form.file.errors }}
+    </div>
+    <div class="field">
+      <label for="{{ form.device_model.id_for_label }}">{{ form.device_model.label }}</label>
+      {{ form.device_model }}{{ form.device_model.errors }}
+      <datalist id="band-models">
+        <option value="Apple Watch"><option value="Fitbit Charge 6"><option value="Garmin">
+        <option value="Samsung Galaxy Watch"><option value="Mi Smart Band"><option value="Amazfit">
+        <option value="Noise"><option value="boAt"><option value="Fire-Boltt">
+      </datalist>
+    </div>
+    <div class="actions"><button class="btn" type="submit">Upload and save</button></div>
+  </form>
+  {% endif %}
+{% endblock %}

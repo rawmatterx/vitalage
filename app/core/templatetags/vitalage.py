@@ -22,3 +22,12 @@ def signed(x):
 def two(x):
     """Two decimal places: 1.184 -> "1.18"."""
     return "%.2f" % x
+
+
+BAND_LABELS = {"resting_hr": "Resting heart rate", "steps": "Daily steps",
+               "sleep_hours": "Sleep (hours)", "vo2max": "VO2max"}
+
+
+@register.filter
+def metric_label(metric):
+    return BAND_LABELS.get(metric, metric)

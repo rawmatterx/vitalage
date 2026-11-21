@@ -28,11 +28,8 @@
 
     <section class="card" aria-labelledby="h-test">
       <h2 id="h-test">About the test</h2>
-      <div class="field" style="margin-top:12px">
-        <label for="{{ form.age.id_for_label }}">{{ form.age.label }}</label>
-        {{ form.age }}{{ form.age.errors }}
-      </div>
-      <div class="row2">
+      {{ form.source }}
+      <div class="row2" style="margin-top:12px">
         <div class="field">
           <label for="{{ form.test_date.id_for_label }}">{{ form.test_date.label }}</label>
           {{ form.test_date }}{{ form.test_date.errors }}

@@ -260,3 +260,137 @@ msgstr ""
 "আপনার সাইন-ইন কোড %(code)s\n"
 "\n"
 "এটি %(minutes)d মিনিট কাজ করবে। আপনি না চেয়ে থাকলে এই ইমেলটি উপেক্ষা করতে পারেন।"
+
+msgid ""
+"A record that you agreed and then withdrew is kept, with no health data in "
+"it."
+msgstr ""
+"আপনি যে সম্মতি দিয়েছিলেন এবং পরে প্রত্যাহার করেছেন, তার একটি রেকর্ড রাখা "
+"হয়; তাতে কোনো স্বাস্থ্য-তথ্য থাকে না।"
+
+msgid "Add report"
+msgstr "রিপোর্ট যোগ"
+
+msgid "All your blood, band and other research data is deleted now."
+msgstr "আপনার রক্ত, ব্যান্ড ও অন্যান্য সব গবেষণা-তথ্য এখনই মুছে ফেলা হবে।"
+
+msgid "Band"
+msgstr "ব্যান্ড"
+
+msgid "Delete my account"
+msgstr "আমার অ্যাকাউন্ট মুছে ফেলুন"
+
+msgid "Delete your account?"
+msgstr "আপনার অ্যাকাউন্ট মুছে ফেলবেন?"
+
+msgid ""
+"Deleting your account also removes your email address, and you will not be "
+"able to sign in again."
+msgstr ""
+"অ্যাকাউন্ট মুছলে আপনার ইমেল ঠিকানাও মুছে যাবে, এবং আপনি আর সাইন ইন করতে "
+"পারবেন না।"
+
+msgid "Done"
+msgstr "সম্পন্ন"
+
+msgid "Download my data"
+msgstr "আমার তথ্য ডাউনলোড করুন"
+
+msgid "History"
+msgstr "ইতিহাস"
+
+msgid ""
+"If you change your mind, sign in again and agree to the study information."
+msgstr "মত বদলালে আবার সাইন ইন করে গবেষণার তথ্যে সম্মতি দিন।"
+
+msgid "Leave the study"
+msgstr "গবেষণা ছেড়ে দিন"
+
+msgid "Main"
+msgstr "প্রধান"
+
+msgid "My data"
+msgstr "আমার তথ্য"
+
+msgid "My data and privacy"
+msgstr "আমার তথ্য ও গোপনীয়তা"
+
+msgid "No, go back"
+msgstr "না, ফিরে যান"
+
+msgid "Results already published from the whole group cannot be changed."
+msgstr "পুরো দলের তথ্য থেকে যে ফলাফল আগেই প্রকাশিত হয়েছে, তা বদলানো যায় না।"
+
+msgid "Save my choice"
+msgstr "আমার পছন্দ সংরক্ষণ করুন"
+
+msgid "The link between your account and your study code is removed for good."
+msgstr "আপনার অ্যাকাউন্ট ও গবেষণা-কোডের সংযোগ চিরতরে সরিয়ে দেওয়া হবে।"
+
+msgid "This cannot be undone. You may want to download your data first."
+msgstr "এটি আর ফেরানো যাবে না। আগে আপনার তথ্য ডাউনলোড করে নিতে পারেন।"
+
+msgid "What happens"
+msgstr "কী হবে"
+
+msgid "What we hold about you"
+msgstr "আপনার সম্পর্কে আমাদের কাছে যা আছে"
+
+msgid "Withdraw from the study"
+msgstr "গবেষণা থেকে সরে যান"
+
+msgid "Withdraw from the study?"
+msgstr "গবেষণা থেকে সরে যাবেন?"
+
+msgid ""
+"Withdrawing deletes your blood, band and other research data. You can do it "
+"at any time without giving a reason."
+msgstr ""
+"সরে গেলে আপনার রক্ত, ব্যান্ড ও অন্যান্য গবেষণা-তথ্য মুছে যাবে। আপনি যেকোনো "
+"সময় কোনো কারণ না দেখিয়ে এটি করতে পারেন।"
+
+msgid "Yes, delete my account"
+msgstr "হ্যাঁ, আমার অ্যাকাউন্ট মুছে ফেলুন"
+
+msgid "Yes, withdraw and delete my data"
+msgstr "হ্যাঁ, সরে যান এবং আমার তথ্য মুছে ফেলুন"
+
+msgid "You have left the study"
+msgstr "আপনি গবেষণা ছেড়ে দিয়েছেন"
+
+msgid "Your account is deleted"
+msgstr "আপনার অ্যাকাউন্ট মুছে ফেলা হয়েছে"
+
+msgid "Your choices"
+msgstr "আপনার পছন্দ"
+
+msgid "Your date of birth, kept encrypted and apart from your health data."
+msgstr "আপনার জন্মতারিখ, এনক্রিপ্ট করে এবং স্বাস্থ্য-তথ্য থেকে আলাদা রাখা।"
+
+msgid "Your email address is deleted and you cannot sign in again."
+msgstr "আপনার ইমেল ঠিকানা মুছে যাবে এবং আপনি আর সাইন ইন করতে পারবেন না।"
+
+msgid "Your email address, kept encrypted."
+msgstr "আপনার ইমেল ঠিকানা, এনক্রিপ্ট করে রাখা।"
+
+msgid "Your research data has been deleted. Thank you for taking part."
+msgstr "আপনার গবেষণা-তথ্য মুছে ফেলা হয়েছে। অংশ নেওয়ার জন্য ধন্যবাদ।"
+
+msgid "Your choice is saved."
+msgstr "আপনার পছন্দ সংরক্ষিত হয়েছে।"
+
+#, python-format
+msgid "Your study code: %(code)s"
+msgstr "আপনার গবেষণা-কোড: %(code)s"
+
+#, python-format
+msgid "%(n)s blood report."
+msgid_plural "%(n)s blood reports."
+msgstr[0] "%(n)sটি রক্ত পরীক্ষার রিপোর্ট।"
+msgstr[1] "%(n)sটি রক্ত পরীক্ষার রিপোর্ট।"
+
+#, python-format
+msgid "%(n)s month of band data."
+msgid_plural "%(n)s months of band data."
+msgstr[0] "%(n)s মাসের ব্যান্ডের তথ্য।"
+msgstr[1] "%(n)s মাসের ব্যান্ডের তথ্য।"
