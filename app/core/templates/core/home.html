@@ -1,11 +1,15 @@
-{% extends "core/base.html" %}
-{% block brand %}{% endblock %}
+{% extends "core/base.html" %}{% load i18n %}
+{% block brand %}<span></span>{% endblock %}
 {% block content %}
   <h1 class="big">Vital<span>Age</span></h1>
-  <p class="lead">The pilot study app is being built. You can already try the blood report steps; nothing you enter is saved.</p>
+  <p class="lead">{% translate "The VitalAge pilot study app. Taking part is by invitation: use the personal link in your invite email to join." %}</p>
 
   <div class="actions" style="margin-bottom:16px">
-    <a class="btn" href="{% url 'add_report' %}">Add a blood report</a>
+    {% if user.is_authenticated %}
+      <a class="btn" href="{% url 'add_report' %}">{% translate "Add a blood report" %}</a>
+    {% else %}
+      <a class="btn" href="{% url 'signin' %}">{% translate "Sign in" %}</a>
+    {% endif %}
   </div>
 
   <section class="card" aria-labelledby="h-check">

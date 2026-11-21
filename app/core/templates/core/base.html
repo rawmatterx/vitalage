@@ -1,5 +1,6 @@
-{% load static %}<!doctype html>
-<html lang="en">
+{% load static i18n %}<!doctype html>
+{% get_current_language as LANG %}
+<html lang="{{ LANG }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,9 +10,21 @@
 </head>
 <body>
 <main>
-  {% block brand %}<a class="brand" href="{% url 'home' %}">Vital<span>Age</span></a>{% endblock %}
+  <div class="topbar">
+    {% block brand %}<a class="brand" href="{% url 'home' %}">Vital<span>Age</span></a>{% endblock %}
+    <form action="{% url 'set_language' %}" method="post" aria-label="{% translate 'Language' %}">{% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <button class="linkish" name="language" value="en" lang="en"{% if LANG == "en" %} aria-current="true"{% endif %}>English</button>
+      <button class="linkish" name="language" value="bn" lang="bn"{% if LANG == "bn" %} aria-current="true"{% endif %}>বাংলা</button>
+    </form>
+  </div>
   {% block content %}{% endblock %}
-  <p class="note">Not a diagnostic tool. Built on US data; not yet validated in Indian adults.</p>
+  {% if user.is_authenticated %}
+    <form action="{% url 'signout' %}" method="post" class="note">{% csrf_token %}
+      <button class="linkish" type="submit">{% translate "Sign out" %}</button>
+    </form>
+  {% endif %}
+  <p class="note">{% translate "Not a diagnostic tool. Built on US data; not yet validated in Indian adults." %}</p>
 </main>
 </body>
 </html>

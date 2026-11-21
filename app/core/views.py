@@ -1,10 +1,13 @@
 """Pages of the VitalAge app.
 
-Milestone 2: Add report -> Review values -> Results. Nothing is saved: the
-values travel from page to page inside the form itself, and the server
-forgets them once the page is sent. Saving comes in milestone 4, after
-sign-in and consent (milestone 3).
+Add report -> Review values -> Results. Only signed-in participants who have
+given consent and filled in About you can open these pages (milestone 3).
+Nothing is saved yet: the values travel from page to page inside the form
+itself, and the server forgets them once the page is sent. Saving comes in
+milestone 4.
 """
+
+from datetime import date
 
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -13,6 +16,9 @@ from django.views.decorators.http import require_http_methods, require_POST
 from phenoage import phenoage
 from phenoage.internal import internal_age
 from phenoage.vitalage import VERSION
+
+from identity.decorators import participant_required
+from identity.models import PersonLink
 
 from .forms import ReportForm
 from .science import compute, review_rows
@@ -48,16 +54,25 @@ def home(request):
     return render(request, "core/home.html", {"example": example_result(), "version": VERSION})
 
 
+def age_today(account):
+    """Age in whole years from the birth date kept in the identity store."""
+    born = PersonLink.objects.get(account=account).birth_date
+    today = date.today()
+    return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+
+
+@participant_required
 @require_http_methods(["GET", "POST"])
 def add_report(request):
     """Screen 5. A POST here comes from "Edit values" on the Review screen and
     simply puts the values back in the form."""
-    form = ReportForm(request.POST) if request.method == "POST" else ReportForm()
+    form = ReportForm(request.POST) if request.method == "POST" else ReportForm(initial={"age": age_today(request.user)})
     if request.method == "POST":
         form.is_valid()   # show any problems next to the boxes
     return render(request, "core/add_report.html", {"form": form})
 
 
+@participant_required
 @require_POST
 def review(request):
     """Screen 6: show the values back, as printed, before any result."""
@@ -74,6 +89,7 @@ def review(request):
     })
 
 
+@participant_required
 @require_POST
 def result(request):
     """Screen 7: the results. The values are checked again, never trusted."""

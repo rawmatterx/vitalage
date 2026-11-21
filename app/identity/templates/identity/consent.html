@@ -1,0 +1,28 @@
+{% extends "core/base.html" %}{% load i18n %}
+{% block title %}{% translate "Consent" %} · VitalAge{% endblock %}
+{% block content %}
+  <p class="steps">{% translate "Step 2 of 4" %}</p>
+  <h1>{{ version.title }}</h1>
+  {% if version.is_draft %}
+    <p class="warn" role="note"><strong>{% translate "Draft wording." %}</strong> {% translate "This text is not yet approved by an ethics committee. It is for testing only." %}</p>
+  {% endif %}
+  <section class="card">
+    <h2>{% translate "In short" %}</h2>
+    <ul class="plain">{% for point in version.summary_points %}<li>{{ point }}</li>{% endfor %}</ul>
+  </section>
+  <details class="card">
+    <summary>{% translate "Read the full information" %}</summary>
+    {% for para in version.paragraphs %}<p>{{ para }}</p>{% endfor %}
+    <p class="note">{% blocktranslate with v=version.version %}Version {{ v }}{% endblocktranslate %}</p>
+  </details>
+  <form method="post" class="card" novalidate>{% csrf_token %}
+    {% for field in form %}
+      <div class="field check">
+        <label>{{ field }} <span>{{ field.label }}</span></label>
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+    <p class="note">{% translate "The second box is optional. You can withdraw at any time." %}</p>
+    <div class="actions"><button class="btn" type="submit">{% translate "Continue" %}</button></div>
+  </form>
+{% endblock %}

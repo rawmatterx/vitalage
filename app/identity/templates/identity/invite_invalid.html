@@ -1,0 +1,7 @@
+{% extends "core/base.html" %}{% load i18n %}
+{% block title %}{% translate "Link not valid" %} · VitalAge{% endblock %}
+{% block content %}
+  <h1>{% translate "This invite link does not work" %}</h1>
+  <p class="lead">{% translate "It may have been used already, or it is more than 7 days old. If you already joined, sign in with your email. Otherwise ask the study coordinator for a new link." %}</p>
+  <div class="actions"><a class="btn" href="{% url 'signin' %}">{% translate "Sign in" %}</a></div>
+{% endblock %}

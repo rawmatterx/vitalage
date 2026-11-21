@@ -3,10 +3,14 @@
     DJANGO_DEBUG=1 python app/manage.py test core
 """
 
+from datetime import date
+
 from django.test import TestCase
 from django.urls import reverse
 
 from core.views import EXAMPLE_REPORT, example_result
+from identity.crypto import encrypt
+from identity.models import Account, ConsentRecord, ConsentVersion, PersonLink
 
 
 def form_data(report=EXAMPLE_REPORT, age=58, **extra):
@@ -19,11 +23,28 @@ def form_data(report=EXAMPLE_REPORT, age=58, **extra):
     return data
 
 
+def make_participant(email="p@example.com", born=date(1968, 1, 1)):
+    """An account that has given consent and filled in About you."""
+    account = Account.objects.create_user(email)
+    ConsentRecord.objects.create(account=account, purpose="pilot_research",
+                                 consent_version=ConsentVersion.current("en"))
+    PersonLink.objects.create(account=account, birth_date_encrypted=encrypt(born.isoformat()))
+    return account
+
+
+class ParticipantTestCase(TestCase):
+    """The report pages are for signed-in participants only."""
+    def setUp(self):
+        self.account = make_participant()
+        self.client.force_login(self.account)
+
+
 class HomePageTests(TestCase):
     def test_home_page_loads(self):
         response = self.client.get(reverse("home"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Add a blood report")
+        self.assertContains(response, "Sign in")
+        self.assertContains(response, "invite email")
 
     def test_home_page_shows_the_science_result(self):
         # The README example: age 58 gives internal age 61.8 (+3.8 years).
@@ -40,7 +61,7 @@ class HomePageTests(TestCase):
         self.assertEqual(response.json(), {"status": "ok"})
 
 
-class AddReportTests(TestCase):
+class AddReportTests(ParticipantTestCase):
     def test_form_shows_all_nine_markers(self):
         response = self.client.get(reverse("add_report"))
         self.assertEqual(response.status_code, 200)
@@ -48,12 +69,18 @@ class AddReportTests(TestCase):
             self.assertContains(response, 'name="v_%s"' % marker)
         self.assertContains(response, "never uploaded")
 
+    def test_age_is_filled_in_from_the_birth_date(self):
+        response = self.client.get(reverse("add_report"))
+        born = date(1968, 1, 1)
+        today = date.today()
+        self.assertContains(response, 'value="%d"' % (today.year - born.year))
+
     def test_edit_values_puts_them_back_in_the_form(self):
         response = self.client.post(reverse("add_report"), form_data())
         self.assertContains(response, 'value="8400')
 
 
-class ReviewTests(TestCase):
+class ReviewTests(ParticipantTestCase):
     def test_shows_values_as_entered_with_flags(self):
         response = self.client.post(reverse("review"), form_data())
         self.assertEqual(response.status_code, 200)
@@ -85,7 +112,7 @@ class ReviewTests(TestCase):
         self.assertEqual(self.client.get(reverse("review")).status_code, 405)
 
 
-class ResultTests(TestCase):
+class ResultTests(ParticipantTestCase):
     def test_full_report_matches_the_command_line(self):
         response = self.client.post(reverse("result"), form_data())
         self.assertEqual(response.status_code, 200)
@@ -113,3 +140,14 @@ class ResultTests(TestCase):
         self.client.post(reverse("result"), form_data())
         after = {m: m.objects.count() for m in apps.get_models()}
         self.assertEqual(before, after)
+
+
+class ReportPagesNeedSignInTests(TestCase):
+    def test_signed_out_people_go_to_sign_in(self):
+        for name in ("add_report", "review", "result"):
+            response = self.client.post(reverse(name), form_data())
+            self.assertRedirects(response, reverse("signin"))
+
+    def test_without_consent_people_go_to_consent(self):
+        self.client.force_login(Account.objects.create_user("new@example.com"))
+        self.assertRedirects(self.client.get(reverse("add_report")), reverse("consent"))

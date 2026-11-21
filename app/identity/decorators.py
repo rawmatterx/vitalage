@@ -1,0 +1,30 @@
+"""Page guards: each page says what a person must have done before seeing it."""
+
+from functools import wraps
+
+from django.shortcuts import redirect
+
+from .models import ConsentRecord, PersonLink
+
+
+def participant_required(view):
+    """Signed in, consent given, and About you filled in, in that order."""
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect("signin")
+        if not ConsentRecord.has_active(request.user):
+            return redirect("consent")
+        if not PersonLink.objects.filter(account=request.user).exists():
+            return redirect("about")
+        return view(request, *args, **kwargs)
+    return wrapper
+
+
+def next_step(account):
+    """Where someone who just signed in should go."""
+    if not ConsentRecord.has_active(account):
+        return "consent"
+    if not PersonLink.objects.filter(account=account).exists():
+        return "about"
+    return "add_report"
